@@ -35,7 +35,7 @@ export default function Login() {
       <div className="flex w-full max-w-sm flex-col gap-6">
         <div className="flex flex-col items-center gap-3 text-center">
           <img src="/favicon.svg" alt="" width={56} height={56} />
-          <h1 className="text-3xl">Burdis</h1>
+          <h1 className="text-3xl">Burdis Flashcards</h1>
           <p className="text-muted">
             {signingUp
               ? 'Create an account so your cards are saved and sync between your phone and computer.'

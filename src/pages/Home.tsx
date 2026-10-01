@@ -47,7 +47,7 @@ export default function Home() {
             </button>
           </div>
         </div>
-        <h1 className="text-3xl tracking-tight lg:text-4xl">Burdis</h1>
+        <h1 className="text-3xl tracking-tight lg:text-4xl">Burdis Flashcards</h1>
       </div>
 
       {subjects.length === 0 ? (
