@@ -6,6 +6,7 @@ import EditCard from './pages/EditCard'
 import Home from './pages/Home'
 import Review from './pages/Review'
 import SetPage from './pages/SetPage'
+import Settings from './pages/Settings'
 import Stats from './pages/Stats'
 import Login from './pages/Login'
 import { useAccount } from './sync/AccountProvider'
@@ -27,6 +28,7 @@ export default function App() {
         <Route path="/notes/:id/edit" element={<EditCard />} />
         <Route path="/browse" element={<Browse />} />
         <Route path="/stats" element={<Stats />} />
+        <Route path="/settings" element={<Settings />} />
         <Route path="*" element={<Home />} />
       </Route>
     </Routes>

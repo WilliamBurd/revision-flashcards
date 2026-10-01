@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { pickNext } from '../session/buildQueue'
 import { db } from './db'
 import { addBasicNote, updateNote } from './notes'
-import { allowMoreNewCards, getOverview, loadQueueInput, recordReview } from './study'
-import { countCardsIn, createSet, createSubject, deleteSubject } from './subjects'
+import { allowMoreNewCards, getOverview, loadQueueInput, recordReview, undoReview } from './study'
+import { countCardsIn, createSet, createSubject, deleteSubject, setExamDates } from './subjects'
 
 const MIN = 60_000
 
@@ -64,11 +64,11 @@ describe('study flow (Phase 1 acceptance)', () => {
     const [card] = await db.cards.toArray()
     let t = Date.now()
     for (let i = 0; i < 5; i++) {
-      const c = await recordReview(card.id, 1, 1000, t)
+      const { card: c } = await recordReview(card.id, 1, 1000, t)
       expect(c.is_leech).toBe(false)
       t += 2 * MIN
     }
-    expect((await recordReview(card.id, 1, 1000, t)).is_leech).toBe(true)
+    expect((await recordReview(card.id, 1, 1000, t)).card.is_leech).toBe(true)
   })
 
   it('editing a note keeps the card schedule', async () => {
@@ -76,7 +76,7 @@ describe('study flow (Phase 1 acceptance)', () => {
     const set = await createSet(subject.id, 'Tudors')
     const note = await addBasicNote(set.id, 'Battle of Bosworth?', '1458')
     const [card] = await db.cards.toArray()
-    const rated = await recordReview(card.id, 4, 1000)
+    const { card: rated } = await recordReview(card.id, 4, 1000)
     await updateNote(note.id, { back: '1485' })
     const after = await db.cards.get(card.id)
     expect(after?.due).toBe(rated.due)
@@ -93,5 +93,50 @@ describe('study flow (Phase 1 acceptance)', () => {
     await deleteSubject(subject.id)
     expect((await getOverview()).bySet.size).toBe(0)
     expect((await db.cards.toArray()).every((c) => c.deleted)).toBe(true)
+  })
+})
+
+describe('cram and undo (Phase 4)', () => {
+  it('cram ratings leave due dates unchanged', async () => {
+    const subject = await createSubject('History')
+    const set = await createSet(subject.id, 'Tudors')
+    for (let i = 0; i < 3; i++) await addBasicNote(set.id, `Q${i}`, `A${i}`)
+    const cards = await db.cards.toArray()
+    await recordReview(cards[0].id, 3, 1000)
+    const before = await db.cards.toArray()
+    for (const c of before) await recordReview(c.id, 1, 1000, Date.now(), { cram: true })
+    expect(await db.cards.toArray()).toEqual(before)
+    // Logged, but not counted towards today's new cards.
+    expect((await db.review_logs.toArray()).filter((l) => l.is_cram)).toHaveLength(3)
+    expect((await getOverview()).bySet.get(set.id)?.newToday).toBe(2)
+  })
+
+  it('undo puts the schedule back and deletes the log', async () => {
+    const subject = await createSubject('History')
+    const set = await createSet(subject.id, 'Tudors')
+    await addBasicNote(set.id, 'Q', 'A')
+    const [card] = await db.cards.toArray()
+    const result = await recordReview(card.id, 4, 1000)
+    expect(result.card.due).not.toBe(card.due)
+    await undoReview(result)
+    const after = await db.cards.get(card.id)
+    expect({ ...after, updated_at: 0, dirty: 0 }).toEqual({ ...card, updated_at: 0, dirty: 0 })
+    expect((await db.review_logs.get(result.logId))?.deleted).toBe(true)
+  })
+
+  it('no card counts as due after its exam', async () => {
+    const subject = await createSubject('History')
+    const set = await createSet(subject.id, 'Tudors')
+    await addBasicNote(set.id, 'Q', 'A')
+    const [card] = await db.cards.toArray()
+    await recordReview(card.id, 4, 1000)
+    const now = Date.now()
+    // Pretend it is known for a month, then add an exam in 5 days.
+    await db.cards.update(card.id, { state: 2, due: now + 30 * 24 * 3600_000, scheduled_days: 30 })
+    const exam = new Date(now + 5 * 24 * 3600_000)
+    const date = `${exam.getFullYear()}-${String(exam.getMonth() + 1).padStart(2, '0')}-${String(exam.getDate()).padStart(2, '0')}`
+    await setExamDates(subject.id, [{ name: 'Paper 1', date }])
+    expect((await getOverview(now)).bySet.get(set.id)?.due).toBe(0)
+    expect((await getOverview(now + 4 * 24 * 3600_000 + 3600_000)).bySet.get(set.id)?.due).toBe(1)
   })
 })

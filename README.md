@@ -5,9 +5,11 @@ spaced repetition (the FSRS algorithm) so each review shows the cards you're
 closest to forgetting. It works on a phone and a desktop, and everything is
 saved on the device, so it works with no signal.
 
-**Status: Phase 3.** Subjects, sets, quick add, editing and FSRS review all
+**Status: Phase 4.** Subjects, sets, quick add, editing and FSRS review all
 work, plus cloze cards, reversed cards, pasting many cards at once, tags,
-bold and italics, and Browse with search. Anyone can create an account with
+bold and italics, and Browse with search. Phase 4 added cram mode, undo, an
+end-of-session summary, exam dates, stats with a leeches list, a settings
+screen, and JSON and CSV import and export. Anyone can create an account with
 an email and password; each person's cards sync between their devices and
 nobody can see anyone else's. The app installs to your home screen and works
 with no signal.
@@ -55,7 +57,28 @@ with no signal.
   | Confident | 4 | Easy. It comes back much later. |
 
   Press E (or the pencil) to fix a typo mid-review; it doesn't reset the
-  card's schedule. Escape leaves the review.
+  card's schedule. Press Z (or the curved arrow) to undo the last rating and
+  see that card again. Escape leaves the review. At the end you get a
+  summary: cards reviewed, how many were No Idea, and the time taken.
+- **Cram**: on a set's page, **Cram all** goes through every card in the set
+  in a random order, whether due or not. No Idea brings a card back a few
+  cards later. Cram ratings are saved in your history but never change when
+  a card is next due.
+- **Exam dates**: in a subject's ⋯ menu on Home, add its exam dates. Home
+  then counts down to the next one. A set can use its own date instead (on
+  the set's page). See "How cards are scheduled" for what exam dates change.
+- **Stats**: your streak, today's reviews, how many cards are due each day
+  for the next week, known / learning / new per set, and the leeches list
+  (cards you keep forgetting), each linking to its edit screen.
+- **Settings** (the sliders button on Home, or in the sidebar): target
+  retention (80% to 95%), the longest gap between reviews, the daily new card
+  limit across all sets, the theme, your account, and backups.
+- **Backup and CSV**: Settings → **Export everything** saves a `.json` file
+  with every card and its progress; **Import a backup** merges one back in
+  (nothing is duplicated or deleted, and newer progress on the device is
+  kept). On a set's page you can export or import a CSV file with columns
+  front, back, tags, for spreadsheets or other apps; a front with
+  `{{blanks}}` becomes a blanks card.
 
 - **Theme**: tap the palette button on Home (or Theme in the sidebar on a
   computer) to pick Colourful, Midnight or Notebook. "Match device" uses
@@ -79,8 +102,13 @@ with no signal.
   tomorrow so they don't give each other away.
 - A study day starts at 4am, so a late-night session still counts as that
   day.
-- A card rated No Idea 6 times is flagged as a "leech" so you can rewrite it
-  later (the leeches list arrives in Phase 4).
+- A card rated No Idea 6 times is flagged as a "leech" and listed on Stats so
+  you can rewrite it.
+- **Before an exam**: no card is scheduled after it (anything that would be
+  is brought forward to the day before), so every card comes up at least
+  once in the final week. In the last 14 days, target retention rises to 95%,
+  so cards come back more often. Once an exam has started, the next one takes
+  over; with none left, scheduling goes back to normal.
 
 ## Running it on your computer
 
@@ -197,12 +225,14 @@ src/
 │   ├── db.ts        the database and its indexes
 │   ├── subjects.ts  create, rename and delete subjects and sets
 │   ├── notes.ts     add, edit and delete cards
-│   ├── study.ts     due counts, daily new-card limits, saving ratings
+│   ├── study.ts     due counts, daily new-card limits, saving and undoing ratings
+│   ├── stats.ts     streak, forecast and leeches for Stats
 │   └── settings.ts  scheduling settings and the last-used set
+├── backup/      JSON backups and CSV import and export
 ├── notes/       card text: formatting, cloze blanks, pasted lines, and which
 │                cards a note makes (edits keep each card's schedule)
-├── scheduler/   the FSRS wrapper (built on ts-fsrs) and interval labels
-├── session/     which card comes next in a review, and the review state
+├── scheduler/   the FSRS wrapper (built on ts-fsrs), exam-date rules, interval labels
+├── session/     which card comes next in a review, cram order, and the review state
 ├── sync/        accounts and syncing with Supabase
 │   ├── engine.ts           upload, download, merge, and when to sync
 │   ├── replay.ts           rebuilds a card's schedule from its review history

@@ -1,7 +1,7 @@
 import { newId } from '../lib/ids'
 import { db } from './db'
 import { DEFAULT_NEW_CARDS_PER_SET } from './settings'
-import type { CardSet, Subject } from './types'
+import type { CardSet, ExamDate, Subject } from './types'
 
 const byOrder = (a: { sort_order: number; created_at: number }, b: { sort_order: number; created_at: number }) =>
   a.sort_order - b.sort_order || a.created_at - b.created_at
@@ -34,6 +34,14 @@ export async function renameSubject(id: string, name: string): Promise<void> {
   await db.subjects.update(id, { name: name.trim(), updated_at: Date.now() })
 }
 
+export async function setExamDates(id: string, exams: ExamDate[]): Promise<void> {
+  const clean = exams
+    .filter((e) => /^\d{4}-\d{2}-\d{2}$/.test(e.date))
+    .map((e) => ({ name: e.name.trim(), date: e.date }))
+    .sort((a, b) => a.date.localeCompare(b.date))
+  await db.subjects.update(id, { exam_dates: clean, updated_at: Date.now() })
+}
+
 export async function createSet(subjectId: string, name: string): Promise<CardSet> {
   const now = Date.now()
   const siblings = (await listSets()).filter((s) => s.subject_id === subjectId)
@@ -54,7 +62,7 @@ export async function createSet(subjectId: string, name: string): Promise<CardSe
 
 export async function updateSet(
   id: string,
-  changes: Partial<Pick<CardSet, 'name' | 'new_cards_per_day'>>,
+  changes: Partial<Pick<CardSet, 'name' | 'new_cards_per_day' | 'exam_date_override'>>,
 ): Promise<void> {
   await db.sets.update(id, { ...changes, updated_at: Date.now() })
 }

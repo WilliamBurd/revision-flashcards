@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { CloseIcon, PencilIcon } from '../components/Icons'
+import { CloseIcon, PencilIcon, UndoIcon } from '../components/Icons'
 import Modal from '../components/Modal'
 import NoteEditor from '../components/NoteEditor'
 import RatingButtons from '../components/RatingButtons'
@@ -10,7 +10,7 @@ import type { Scope } from '../db/study'
 import type { Rating } from '../db/types'
 import { cardSides } from '../notes/cards'
 import { formatInterval } from '../scheduler/formatInterval'
-import { useReviewSession } from '../session/useReviewSession'
+import { useReviewSession, type SessionSummary } from '../session/useReviewSession'
 
 const LEARN_MORE = 10
 
@@ -23,12 +23,13 @@ export default function Review() {
     () => (set ? { kind: 'set', id: set } : subject ? { kind: 'subject', id: subject } : { kind: 'all' }),
     [set, subject],
   )
-  const { state, reviewed, intervals, reveal, rate, refreshNote, learnMore } = useReviewSession(scope)
+  const cram = params.get('cram') === '1'
+  const { state, summary, reviewed, intervals, reveal, rate, undo, canUndo, refreshNote, learnMore } = useReviewSession(scope, cram)
   const [editing, setEditing] = useState(false)
   const showingCard = state.phase === 'question' || state.phase === 'answer'
   const sides = showingCard ? cardSides(state.note, state.card) : null
 
-  // Keyboard: Space or Enter reveals, 1-4 rate, E edits, Escape leaves.
+  // Keyboard: Space or Enter reveals, 1-4 rate, E edits, Z undoes, Escape leaves.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (editing || e.ctrlKey || e.metaKey || e.altKey) return
@@ -42,13 +43,15 @@ export default function Review() {
       } else if (showingCard && e.key.toLowerCase() === 'e') {
         e.preventDefault() // so the "e" isn't typed into the edit form
         setEditing(true)
+      } else if (canUndo && e.key.toLowerCase() === 'z') {
+        void undo()
       } else if (e.key === 'Escape') {
         navigate('/')
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [state, editing, showingCard, reveal, rate, navigate])
+  }, [state, editing, showingCard, reveal, rate, undo, canUndo, navigate])
 
   return (
     <div className="pt-safe flex h-dvh flex-col">
@@ -58,6 +61,7 @@ export default function Review() {
         </Link>
         <div className="flex flex-1 flex-col items-center gap-1.5">
           <p className="text-sm font-semibold text-muted" aria-live="polite">
+            {cram && <span className="mr-2 rounded-full bg-accent-soft px-2 py-0.5 text-xs font-bold tracking-wider text-on-accent-soft uppercase">Cram</span>}
             {showingCard ? `${state.remaining} to go` : ''}
           </p>
           {showingCard && (
@@ -69,6 +73,15 @@ export default function Review() {
             </div>
           )}
         </div>
+        <button
+          type="button"
+          className={`${btn.icon} ${canUndo ? '' : 'invisible'}`}
+          aria-label="Undo last rating"
+          title="Undo (Z)"
+          onClick={() => void undo()}
+        >
+          <UndoIcon />
+        </button>
         <button
           type="button"
           className={`${btn.icon} ${showingCard ? '' : 'invisible'}`}
@@ -120,7 +133,10 @@ export default function Review() {
                   Show answer
                 </button>
               ) : (
-                <RatingButtons intervals={intervals} onRate={(r) => void rate(r)} />
+                <>
+                  <RatingButtons intervals={intervals} onRate={(r) => void rate(r)} />
+                  {cram && <p className="mt-2 text-center text-xs text-muted">Cram doesn't change when cards are next due.</p>}
+                </>
               )}
             </div>
           </div>
@@ -128,7 +144,7 @@ export default function Review() {
       )}
 
       {state.phase === 'waiting' && (
-        <Finished reviewed={reviewed}>
+        <Finished summary={summary} canUndo={canUndo} onUndo={() => void undo()}>
           <p className="text-muted">
             Your next card is back in {formatInterval(state.nextDue - Date.now())}. Stay here and it will appear, or come back later.
           </p>
@@ -136,7 +152,7 @@ export default function Review() {
       )}
 
       {state.phase === 'done' && (
-        <Finished reviewed={reviewed}>
+        <Finished summary={summary} canUndo={canUndo} onUndo={() => void undo()}>
           {state.newHeldBack > 0 ? (
             <>
               <p className="text-muted">
@@ -148,7 +164,7 @@ export default function Review() {
               </button>
             </>
           ) : (
-            <p className="text-muted">Nothing else is due. Nice work.</p>
+            <p className="text-muted">{cram ? "That's every card in this cram. Nice work." : 'Nothing else is due. Nice work.'}</p>
           )}
         </Finished>
       )}
@@ -170,14 +186,45 @@ export default function Review() {
   )
 }
 
-function Finished({ reviewed, children }: { reviewed: number; children: ReactNode }) {
+function Finished({ summary, canUndo, onUndo, children }: { summary: SessionSummary; canUndo: boolean; onUndo: () => void; children: ReactNode }) {
+  const { reviewed, noIdea, timeMs } = summary
   return (
     <div className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
-      <h1 className="text-3xl">{reviewed > 0 ? `${reviewed} ${reviewed === 1 ? 'card' : 'cards'} reviewed` : 'All caught up'}</h1>
+      <h1 className="text-3xl">{reviewed > 0 ? 'Session done' : 'All caught up'}</h1>
+      {reviewed > 0 && (
+        <dl className="grid w-full grid-cols-3 gap-2">
+          <SummaryStat label={reviewed === 1 ? 'card reviewed' : 'cards reviewed'} value={String(reviewed)} />
+          <SummaryStat label="No Idea" value={String(noIdea)} />
+          <SummaryStat label="time taken" value={formatDuration(timeMs)} />
+        </dl>
+      )}
       {children}
       <Link to="/" className={btn.primary}>
         Back to home
       </Link>
+      {canUndo && (
+        <button type="button" className={btn.ghost} onClick={onUndo}>
+          Undo last rating
+        </button>
+      )}
     </div>
   )
+}
+
+function SummaryStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="card flex flex-col-reverse items-center px-2 py-3">
+      <dt className="text-xs text-muted">{label}</dt>
+      <dd className="font-display text-2xl font-bold">{value}</dd>
+    </div>
+  )
+}
+
+/** e.g. "45s", "3m 20s", "1h 5m" */
+function formatDuration(ms: number): string {
+  const s = Math.round(ms / 1000)
+  if (s < 60) return `${s}s`
+  const m = Math.floor(s / 60)
+  if (m < 60) return `${m}m ${s % 60}s`
+  return `${Math.floor(m / 60)}h ${m % 60}m`
 }

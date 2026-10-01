@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import ConfirmDialog from '../components/ConfirmDialog'
+import ExamDatesDialog from '../components/ExamDatesDialog'
 import { ProgressBar, ProgressKey } from '../components/Counts'
-import { ChevronIcon, MoreIcon, PaletteIcon } from '../components/Icons'
+import { ChevronIcon, MoreIcon, PaletteIcon, SettingsIcon } from '../components/Icons'
 import { useLayout } from '../components/Layout'
 import SyncBadge from '../components/SyncBadge'
 import Modal from '../components/Modal'
@@ -10,6 +11,7 @@ import NameDialog from '../components/NameDialog'
 import { btn } from '../components/ui'
 import { useLibrary, useOverview } from '../db/hooks'
 import { readyCount } from '../db/study'
+import { daysUntil, nextExam } from '../scheduler/exams'
 import { countCardsIn, createSet, createSubject, deleteSubject, renameSubject } from '../db/subjects'
 import type { Subject } from '../db/types'
 
@@ -17,6 +19,7 @@ type Dialog =
   | { kind: 'new-subject' }
   | { kind: 'menu'; subject: Subject }
   | { kind: 'rename'; subject: Subject }
+  | { kind: 'exams'; subject: Subject }
   | { kind: 'new-set'; subject: Subject }
   | { kind: 'delete'; subject: Subject; cardCount: number }
 
@@ -45,6 +48,9 @@ export default function Home() {
             <button type="button" className={btn.icon} aria-label="Change theme" onClick={openThemePicker}>
               <PaletteIcon />
             </button>
+            <Link to="/settings" className={btn.icon} aria-label="Settings">
+              <SettingsIcon />
+            </Link>
           </div>
         </div>
         <h1 className="text-3xl tracking-tight lg:text-4xl">Burdis Flashcards</h1>
@@ -81,6 +87,7 @@ export default function Home() {
             )
             const subjectTotal = subjectReady.due + subjectReady.newToday
             const colour = (i % 4) + 1
+            const exam = nextExam(subject.exam_dates, Date.now())
             return (
               <section key={subject.id} aria-labelledby={`subject-${subject.id}`} className="card overflow-hidden">
                 <div
@@ -88,9 +95,12 @@ export default function Home() {
                   style={{ background: `var(--subject-${colour}-head)`, color: `var(--subject-${colour}-head-ink)` }}
                 >
                   <span className="h-3 w-3 shrink-0 rounded" style={{ background: `var(--subject-${colour})` }} />
-                  <h2 id={`subject-${subject.id}`} className="font-display min-w-0 flex-1 truncate text-lg">
-                    {subject.name}
-                  </h2>
+                  <div className="flex min-w-0 flex-1 flex-col">
+                    <h2 id={`subject-${subject.id}`} className="font-display truncate text-lg">
+                      {subject.name}
+                    </h2>
+                    {exam && <span className="truncate text-sm opacity-80">{examCountdown(exam.name, daysUntil(exam.start, Date.now()))}</span>}
+                  </div>
                   {subjectTotal > 0 && (
                     <Link
                       to={`/review?subject=${subject.id}`}
@@ -190,6 +200,9 @@ export default function Home() {
             <button type="button" className={btn.secondary} onClick={() => setDialog({ kind: 'new-set', subject: dialog.subject })}>
               Add a set
             </button>
+            <button type="button" className={btn.secondary} onClick={() => setDialog({ kind: 'exams', subject: dialog.subject })}>
+              Exam dates
+            </button>
             <button type="button" className={btn.secondary} onClick={() => setDialog({ kind: 'rename', subject: dialog.subject })}>
               Rename
             </button>
@@ -206,6 +219,7 @@ export default function Home() {
           </div>
         )}
       </Modal>
+      <ExamDatesDialog subject={dialog?.kind === 'exams' ? dialog.subject : null} onClose={close} />
       <ConfirmDialog
         open={dialog?.kind === 'delete'}
         title={dialog?.kind === 'delete' ? `Delete ${dialog.subject.name}?` : ''}
@@ -245,4 +259,11 @@ function readySummary(due: number, fresh: number) {
   if (due) parts.push(`${due} ${due === 1 ? 'review' : 'reviews'}`)
   if (fresh) parts.push(`${fresh} new ${fresh === 1 ? 'card' : 'cards'}`)
   return parts.join(' · ')
+}
+
+function examCountdown(name: string, days: number) {
+  const what = name || 'Exam'
+  if (days <= 0) return `${what} today`
+  if (days === 1) return `${what} tomorrow`
+  return `${what} in ${days} days`
 }

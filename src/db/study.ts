@@ -3,7 +3,8 @@
 
 import { dayKey, dayStart, nextDayStart } from '../lib/day'
 import { newId } from '../lib/ids'
-import { LEECH_THRESHOLD, makeScheduler, rateCard } from '../scheduler/fsrs'
+import { examDatesFor, latestBeforeExam, nextExamStart, settingsForExam } from '../scheduler/exams'
+import { LEECH_THRESHOLD, makeScheduler, previewIntervals, rateCard } from '../scheduler/fsrs'
 import type { QueueInput } from '../session/buildQueue'
 import { db } from './db'
 import { getSettings, updateSettings } from './settings'
@@ -64,8 +65,25 @@ function newBudget(settings: Settings, sets: CardSet[], logs: ReviewLog[], cardS
   }
 }
 
-async function liveCards(): Promise<Card[]> {
-  return (await db.cards.toArray()).filter((c) => !c.deleted)
+/**
+ * Every card not deleted. A card due after its next exam counts as due the
+ * day before instead, so cards scheduled before an exam date was added still
+ * come up in time.
+ */
+export async function liveCards(now: number): Promise<Card[]> {
+  const [cards, sets, subjects] = await Promise.all([db.cards.toArray(), db.sets.toArray(), db.subjects.toArray()])
+  const subjectById = new Map(subjects.map((s) => [s.id, s]))
+  const latestBySet = new Map<string, number>()
+  for (const set of sets) {
+    const exam = nextExamStart(examDatesFor(subjectById.get(set.subject_id), set), now)
+    if (exam !== null) latestBySet.set(set.id, latestBeforeExam(exam, now))
+  }
+  return cards
+    .filter((c) => !c.deleted)
+    .map((c) => {
+      const latest = latestBySet.get(c.set_id)
+      return latest !== undefined && c.state !== CardState.New && c.due > latest ? { ...c, due: latest } : c
+    })
 }
 
 export interface StudyOverview {
@@ -76,7 +94,7 @@ export interface StudyOverview {
 
 /** Counts for every set, for the home screen and set pages. */
 export async function getOverview(now = Date.now()): Promise<StudyOverview> {
-  const [settings, sets, cards, logs] = await Promise.all([getSettings(), listSets(), liveCards(), todaysLogs(now)])
+  const [settings, sets, cards, logs] = await Promise.all([getSettings(), listSets(), liveCards(now), todaysLogs(now)])
   const cardSet = new Map(cards.map((c) => [c.id, c.set_id]))
   const budget = newBudget(settings, sets, logs, cardSet, now)
   const endOfDay = nextDayStart(now)
@@ -128,7 +146,7 @@ export async function loadQueueInput(
   const [settings, sets, cards, logs, setIds] = await Promise.all([
     getSettings(),
     listSets(),
-    liveCards(),
+    liveCards(now),
     todaysLogs(now),
     setIdsInScope(scope),
   ])
@@ -148,13 +166,43 @@ export async function loadQueueInput(
   }
 }
 
+/** The scheduler for a card right now: its exam (if any) and the settings that apply. */
+async function schedulingFor(card: Card, now: number) {
+  const settings = await getSettings()
+  const set = await db.sets.get(card.set_id)
+  const subject = set ? await db.subjects.get(set.subject_id) : undefined
+  const exam = nextExamStart(examDatesFor(subject, set), now)
+  return { scheduler: makeScheduler(settingsForExam(settings, exam, now)), exam }
+}
+
+/** When each button would bring this card back, for the labels under the buttons. */
+export async function intervalsFor(card: Card, now = Date.now()) {
+  const { scheduler, exam } = await schedulingFor(card, now)
+  return previewIntervals(card, now, scheduler, exam)
+}
+
+export interface ReviewResult {
+  card: Card
+  /** The card as it was before, so the rating can be undone. */
+  before: Card
+  logId: string
+}
+
 /**
  * Save a rating straight away: the card's new schedule and a review log entry
  * are written together, so an interrupted session loses nothing.
+ * A cram rating is logged but leaves the card's schedule alone.
  */
-export async function recordReview(cardId: string, rating: Rating, durationMs: number, now = Date.now()): Promise<Card> {
-  const settings = await getSettings()
-  const scheduler = makeScheduler(settings)
+export async function recordReview(
+  cardId: string,
+  rating: Rating,
+  durationMs: number,
+  now = Date.now(),
+  options: { cram?: boolean } = {},
+): Promise<ReviewResult> {
+  const card0 = await db.cards.get(cardId)
+  if (!card0) throw new Error('Card not found')
+  const { scheduler, exam } = await schedulingFor(card0, now)
   return db.transaction('rw', db.cards, db.review_logs, async () => {
     const card = await db.cards.get(cardId)
     if (!card) throw new Error('Card not found')
@@ -165,12 +213,13 @@ export async function recordReview(cardId: string, rating: Rating, durationMs: n
       state_before: card.state,
       reviewed_at: now,
       duration_ms: Math.round(durationMs),
-      is_cram: false,
+      is_cram: !!options.cram,
       created_at: now,
       updated_at: now,
       deleted: false,
     }
     await db.review_logs.add(log)
+    if (options.cram) return { card, before: card, logId: log.id }
     const forgotten = await db.review_logs
       .where('card_id')
       .equals(cardId)
@@ -178,12 +227,41 @@ export async function recordReview(cardId: string, rating: Rating, durationMs: n
       .count()
     const updated: Card = {
       ...card,
-      ...rateCard(card, rating, now, scheduler),
+      ...rateCard(card, rating, now, scheduler, exam),
       is_leech: card.is_leech || forgotten >= LEECH_THRESHOLD,
       updated_at: now,
     }
     await db.cards.put(updated)
-    return updated
+    return { card: updated, before: card, logId: log.id }
+  })
+}
+
+const SCHEDULE_FIELDS = [
+  'due',
+  'stability',
+  'difficulty',
+  'elapsed_days',
+  'scheduled_days',
+  'learning_steps',
+  'reps',
+  'lapses',
+  'state',
+  'last_review',
+  'is_leech',
+] as const
+
+/**
+ * Undo a rating: its log entry is deleted (so it syncs as deleted and is left
+ * out of any replay) and the card's schedule goes back to how it was.
+ */
+export async function undoReview(result: ReviewResult, now = Date.now()): Promise<void> {
+  await db.transaction('rw', db.cards, db.review_logs, async () => {
+    await db.review_logs.update(result.logId, { deleted: true, updated_at: now })
+    const log = await db.review_logs.get(result.logId)
+    if (log?.is_cram) return
+    const restore: Partial<Card> = { updated_at: now }
+    for (const f of SCHEDULE_FIELDS) (restore as Record<string, unknown>)[f] = result.before[f]
+    await db.cards.update(result.before.id, restore)
   })
 }
 
