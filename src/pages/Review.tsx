@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import CardForm from '../components/CardForm'
 import { CloseIcon, PencilIcon } from '../components/Icons'
 import Modal from '../components/Modal'
+import NoteEditor from '../components/NoteEditor'
 import RatingButtons from '../components/RatingButtons'
+import RichText from '../components/RichText'
 import { btn } from '../components/ui'
-import { useLibrary } from '../db/hooks'
-import { updateNote } from '../db/notes'
 import type { Scope } from '../db/study'
 import type { Rating } from '../db/types'
+import { cardSides } from '../notes/cards'
 import { formatInterval } from '../scheduler/formatInterval'
 import { useReviewSession } from '../session/useReviewSession'
 
@@ -24,9 +24,9 @@ export default function Review() {
     [set, subject],
   )
   const { state, reviewed, intervals, reveal, rate, refreshNote, learnMore } = useReviewSession(scope)
-  const library = useLibrary()
   const [editing, setEditing] = useState(false)
   const showingCard = state.phase === 'question' || state.phase === 'answer'
+  const sides = showingCard ? cardSides(state.note, state.card) : null
 
   // Keyboard: Space or Enter reveals, 1-4 rate, E edits, Escape leaves.
   useEffect(() => {
@@ -80,7 +80,7 @@ export default function Review() {
         </button>
       </header>
 
-      {showingCard && (
+      {showingCard && sides && (
         <>
           {/* Tapping anywhere on the card reveals the answer. */}
           <div className="mx-auto flex min-h-0 w-full max-w-2xl flex-1 px-4 pt-2 pb-4">
@@ -92,15 +92,21 @@ export default function Review() {
               aria-label={state.phase === 'question' ? 'Show answer' : undefined}
             >
               <span className="rounded-full px-2.5 py-1 text-xs font-bold tracking-wider uppercase bg-raised text-muted">Question</span>
-              <p className="font-display text-2xl leading-snug break-words whitespace-pre-wrap sm:text-[1.75rem]">
-                {state.note.front}
-              </p>
+              <RichText
+                text={sides.question}
+                cloze={sides.cloze ? { active: sides.cloze, revealed: state.phase === 'answer' } : undefined}
+                className="font-display w-full text-2xl leading-snug sm:text-[1.75rem]"
+              />
               {state.phase === 'answer' ? (
-                <>
-                  <span className="h-px w-full bg-line" />
-                  <span className="rounded-full px-2.5 py-1 text-xs font-bold tracking-wider uppercase bg-accent-soft text-on-accent-soft">Answer</span>
-                  <p className="text-xl leading-relaxed break-words whitespace-pre-wrap sm:text-2xl">{state.note.back}</p>
-                </>
+                sides.answer && (
+                  <>
+                    <span className="h-px w-full bg-line" />
+                    <span className="rounded-full px-2.5 py-1 text-xs font-bold tracking-wider uppercase bg-accent-soft text-on-accent-soft">
+                      {sides.cloze ? 'Extra' : 'Answer'}
+                    </span>
+                    <RichText text={sides.answer} className="w-full text-xl leading-relaxed sm:text-2xl" />
+                  </>
+                )
               ) : (
                 <span className="mt-auto self-center text-sm text-muted">Tap to reveal</span>
               )}
@@ -147,16 +153,13 @@ export default function Review() {
         </Finished>
       )}
 
-      {library && showingCard && (
+      {showingCard && (
         <Modal open={editing} onClose={() => setEditing(false)} title="Edit card">
-          <CardForm
-            mode="edit"
-            initial={{ front: state.note.front, back: state.note.back, setId: state.note.set_id }}
-            subjects={library.subjects}
-            sets={library.sets}
+          <NoteEditor
+            key={state.note.id}
+            note={state.note}
             onCancel={() => setEditing(false)}
-            onSave={async ({ front, back, setId }) => {
-              await updateNote(state.note.id, { front, back, set_id: setId })
+            onSaved={async () => {
               await refreshNote()
               setEditing(false)
             }}

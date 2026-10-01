@@ -1,12 +1,21 @@
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import CardForm from '../components/CardForm'
+import BulkAdd from '../components/BulkAdd'
+import CardForm, { type SharedValues } from '../components/CardForm'
+import ClozeForm from '../components/ClozeForm'
 import { btn, input, panel } from '../components/ui'
-import { useLibrary } from '../db/hooks'
-import { addBasicNote } from '../db/notes'
+import { useLibrary, useTags } from '../db/hooks'
+import { addNote, addNotes, type NewNote } from '../db/notes'
 import { getLastSetId, setLastSetId } from '../db/settings'
 import { createSet, createSubject } from '../db/subjects'
 import type { CardSet, Subject } from '../db/types'
+
+type Tab = 'card' | 'cloze' | 'bulk'
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'card', label: 'Card' },
+  { id: 'cloze', label: 'Cloze' },
+  { id: 'bulk', label: 'Paste many' },
+]
 
 export default function AddCard() {
   const library = useLibrary()
@@ -21,22 +30,76 @@ export default function AddCard() {
 function QuickAdd({ subjects, sets, wanted }: { subjects: Subject[]; sets: CardSet[]; wanted: string | null }) {
   // Start with the set from the link, else the last one used, else the first.
   // Worked out once, so later changes to the database don't reset the form.
-  const [setId] = useState(() => (sets.some((s) => s.id === wanted) ? wanted! : sets[0].id))
+  const [shared, setShared] = useState<SharedValues>(() => ({
+    setId: sets.some((s) => s.id === wanted) ? wanted! : sets[0].id,
+    tags: [],
+  }))
+  const [tab, setTab] = useState<Tab>('card')
+  const tags = useTags()
+  const onSharedChange = (next: SharedValues) => {
+    setShared(next)
+    setLastSetId(next.setId)
+  }
+  const common = { subjects, sets, tagSuggestions: tags, onSharedChange }
 
   return (
     <div className="py-6">
-      <h1 className="mb-6 text-2xl font-bold">Add cards</h1>
-      <CardForm
-        mode="add"
-        initial={{ front: '', back: '', setId }}
-        subjects={subjects}
-        sets={sets}
-        onSetChange={setLastSetId}
-        onSave={async ({ front, back, setId }) => {
-          await addBasicNote(setId, front, back)
-          setLastSetId(setId)
-        }}
-      />
+      <h1 className="mb-4 text-2xl font-bold">Add cards</h1>
+      <div role="tablist" aria-label="Kind of card" className="mb-6 grid grid-cols-3 gap-1 rounded-btn bg-raised p-1">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            role="tab"
+            aria-selected={tab === t.id}
+            onClick={() => setTab(t.id)}
+            className={`min-h-11 rounded-btn px-2 font-semibold ${tab === t.id ? 'bg-surface text-ink shadow-sm' : 'text-muted hover:text-ink'}`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'card' && (
+        <CardForm
+          mode="add"
+          initial={{ front: '', back: '', reverse: false, ...shared }}
+          {...common}
+          onSave={async ({ front, back, setId, tags, reverse }) => {
+            await addNote({ setId, type: 'basic', front, back, tags, makeReverse: reverse })
+            setLastSetId(setId)
+          }}
+        />
+      )}
+      {tab === 'cloze' && (
+        <ClozeForm
+          mode="add"
+          initial={{ front: '', extra: '', ...shared }}
+          {...common}
+          onSave={async ({ front, extra, setId, tags }) => {
+            await addNote({ setId, type: 'cloze', front, back: extra, tags })
+            setLastSetId(setId)
+          }}
+        />
+      )}
+      {tab === 'bulk' && (
+        <BulkAdd
+          initial={shared}
+          {...common}
+          onSave={async (lines, { setId, tags }, reverse) => {
+            await addNotes(
+              lines.flatMap((l): NewNote[] =>
+                l.kind === 'basic'
+                  ? [{ setId, type: 'basic', front: l.front, back: l.back, tags, makeReverse: reverse }]
+                  : l.kind === 'cloze'
+                    ? [{ setId, type: 'cloze', front: l.front, back: '', tags }]
+                    : [],
+              ),
+            )
+            setLastSetId(setId)
+          }}
+        />
+      )}
     </div>
   )
 }

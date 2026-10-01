@@ -230,3 +230,23 @@ h1,
 @utility pt-safe {
   padding-top: env(safe-area-inset-top);
 }
+
+/* The Front / Back text boxes (components/RichTextEditor.tsx). */
+.rich-input {
+  padding: 0.75rem;
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+  outline: none;
+  overflow-wrap: anywhere;
+}
+.rich-input ul {
+  list-style: disc;
+  padding-left: 1.5rem;
+}
+.rich-input p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: color-mix(in srgb, var(--muted) 70%, transparent);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}

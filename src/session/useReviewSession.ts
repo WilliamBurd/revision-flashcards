@@ -77,13 +77,14 @@ export function useReviewSession(scope: Scope) {
     [state, loadNext],
   )
 
-  /** Reload the current card's text after it was edited mid-review. */
+  /** Reload the current card after its note was edited mid-review. */
   const refreshNote = useCallback(async () => {
     if (state.phase !== 'question' && state.phase !== 'answer') return
-    const note = await db.notes.get(state.note.id)
-    if (!note || note.deleted) return void loadNext()
+    const [note, card] = await Promise.all([db.notes.get(state.note.id), db.cards.get(state.card.id)])
+    // Removing a cloze blank or a reverse card can delete the card being shown.
+    if (!note || note.deleted || !card || card.deleted) return void loadNext()
     // Keep whatever phase the card is in now; only swap in the new text.
-    setState((s) => ((s.phase === 'question' || s.phase === 'answer') && s.note.id === note.id ? { ...s, note } : s))
+    setState((s) => ((s.phase === 'question' || s.phase === 'answer') && s.card.id === card.id ? { ...s, note, card } : s))
   }, [state, loadNext])
 
   const learnMore = useCallback(

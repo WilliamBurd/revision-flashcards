@@ -5,19 +5,43 @@ spaced repetition (the FSRS algorithm) so each review shows the cards you're
 closest to forgetting. It works on a phone and a desktop, and everything is
 saved on the device, so it works with no signal.
 
-**Status: Phase 2.** Subjects, sets, quick add, editing and FSRS review all
-work. Anyone can create an account with an email and password; each person's
-cards sync between their devices and nobody can see anyone else's. The app
-installs to your home screen and works with no signal.
+**Status: Phase 3.** Subjects, sets, quick add, editing and FSRS review all
+work, plus cloze cards, reversed cards, pasting many cards at once, tags,
+bold and italics, and Browse with search. Anyone can create an account with
+an email and password; each person's cards sync between their devices and
+nobody can see anyone else's. The app installs to your home screen and works
+with no signal.
 
 ## Using it
 
 - **Home** lists your subjects and sets with how many cards are due. The big
   **Review all due** button starts a review of everything.
-- **Add** (or the round + button on a phone) adds cards. After each card the
-  form clears and keeps the same set, so you can type card after card. On a
-  computer, Tab moves from Front to Back and Ctrl+Enter (Cmd+Enter on a Mac)
-  saves.
+- **Add** (or the round + button on a phone) adds cards. It has three tabs:
+  - **Card**: Front and Back. After each card the form clears and keeps the
+    same set and tags, so you can type card after card. Tick **Also make a
+    reversed card** to get a second card that shows the Back and asks for the
+    Front. On a computer, Tab moves from Front to Back and Ctrl+Enter
+    (Cmd+Enter on a Mac) saves.
+  - **Cloze**: type a sentence, then tap the words to hide. Tapping the word
+    next to a blank makes the blank longer ("William" then "III"); tapping a
+    hidden word again un-hides it. Each blank becomes its own card, which
+    shows the sentence with that blank as [...] (or your hint). On a
+    computer you can type blanks as `{{1688}}`, or `{{1688::year}}` for a
+    hint.
+  - **Paste many**: paste one card per line as `Front - Back` (a tab, or the
+    long dashes Word makes, work too). A line with `{{blanks}}` makes cloze
+    cards. Bullets and numbers at the start of lines are ignored. The
+    preview shows every card before you add them, and any line that didn't
+    split is shown in red and left out.
+- **Bold, italics and bullets**: use the B, I and • buttons (on a phone they
+  sit just above the keyboard while you type), or Ctrl+B and Ctrl+I. Plain
+  text works exactly as before.
+- **Tags** are optional labels like "key date" or "exam Q". Add them under
+  the set when adding or editing a card.
+- **Browse** lists every card. Search by any words on either side, filter by
+  set or tag (tap a tag to see all cards with it), and tap a card to edit
+  it. Press and hold a card (or tap **Select**) to choose several, then move
+  them to another set, add or remove a tag, or delete them.
 - **Review**: tap the card (or press Space) to see the answer, then rate how
   well you knew it. Each button shows when the card will come back.
 
@@ -48,6 +72,9 @@ installs to your home screen and works with no signal.
   its own limit too (20 by default; change it on the set's page). When you
   hit the limit, the end of a review offers **Learn more today**, which is
   handy when you've just added a lot of cards.
+- The blanks of one cloze sentence, and a card and its reverse, never come
+  up in the same day's review: once you've seen one, the others wait until
+  tomorrow so they don't give each other away.
 - A study day starts at 4am, so a late-night session still counts as that
   day.
 - A card rated No Idea 6 times is flagged as a "leech" so you can rewrite it
@@ -170,6 +197,8 @@ src/
 │   ├── notes.ts     add, edit and delete cards
 │   ├── study.ts     due counts, daily new-card limits, saving ratings
 │   └── settings.ts  scheduling settings and the last-used set
+├── notes/       card text: formatting, cloze blanks, pasted lines, and which
+│                cards a note makes (edits keep each card's schedule)
 ├── scheduler/   the FSRS wrapper (built on ts-fsrs) and interval labels
 ├── session/     which card comes next in a review, and the review state
 ├── sync/        accounts and syncing with Supabase
@@ -182,9 +211,18 @@ src/
 └── pages/       one file per screen
 ```
 
-A **note** is what you type in; a **card** is what gets studied. For now one
-note makes one card. Phase 3 adds reversed and cloze cards, where one note
-can make several.
+A **note** is what you type in; a **card** is what gets studied. A basic note
+makes one card (two if reversed); a cloze note makes one card per blank.
+Editing a note keeps its cards' progress: in a cloze sentence each blank is
+matched to its card by its text first, then its position, so fixing a typo
+or adding a blank doesn't reset the others.
+
+Card text is stored as plain text with `**bold**`, `_italics_` and lines
+starting `- ` for bullets (see `src/notes/format.ts`), so it stays readable
+in the database and in exports. It is always shown with React elements,
+never as raw HTML, so nothing typed on a card can run as code. The Front and
+Back boxes use [Tiptap](https://tiptap.dev), a free open-source editor, which
+only loads on the Add and Edit screens.
 
 Every record has an ID made on the device plus `created_at`, `updated_at`,
 a `deleted` flag (so deletions sync) and a `dirty` flag (changes not yet
