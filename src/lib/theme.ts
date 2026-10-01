@@ -1,7 +1,7 @@
-// The app's three looks. The choice is remembered on this device; "auto"
+// The app's looks. The choice is remembered on this device; "auto"
 // follows the device's light or dark setting.
 
-export type ThemeChoice = 'auto' | 'colourful' | 'midnight' | 'notebook'
+export type ThemeChoice = 'auto' | 'colourful' | 'midnight' | 'notebook' | 'ocean' | 'arcade' | 'clean'
 export type ThemeName = Exclude<ThemeChoice, 'auto'>
 
 export const THEMES: { id: ThemeChoice; name: string; description: string }[] = [
@@ -9,6 +9,9 @@ export const THEMES: { id: ThemeChoice; name: string; description: string }[] = 
   { id: 'colourful', name: 'Colourful', description: 'Bright, with a colour for each subject' },
   { id: 'midnight', name: 'Midnight', description: 'Dark navy and amber, easy on the eyes at night' },
   { id: 'notebook', name: 'Notebook', description: 'Warm paper and ink, like study notes' },
+  { id: 'ocean', name: 'Ocean', description: 'Calm teal and white, with soft round corners' },
+  { id: 'arcade', name: 'Arcade', description: 'Black with neon lime, pink and blue' },
+  { id: 'clean', name: 'Clean', description: 'Plain black and white, sharp and simple' },
 ]
 
 const KEY = 'theme'
