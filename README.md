@@ -19,8 +19,10 @@ with no signal.
 - **Home** (titled Burdis Flashcards) lists your subjects and sets with how many cards are due. Each
   subject with cards ready has its own big **Review** button at the top, so
   subjects are never mixed in one review.
-- **Add** (or the round + button on a phone) adds cards; **Done** at the top
-  goes back. It has three tabs:
+- **Add** (or the round + button on a phone) first asks which set the cards
+  are for, then shows "Adding to History · Tudors" with **Change** at the
+  top. (From a set's **Add cards** button, that set is already chosen.)
+  **Done** at the top goes back. It has three tabs:
   - **Card**: Front and Back. After each card the form clears and keeps the
     same set and tags, so you can type card after card. Tick **Also make a
     reversed card** to get a second card that shows the Back and asks for the
@@ -204,6 +206,12 @@ login. You only do this once.
   account), so a friend can sign in on the same phone without seeing them.
   Cards made before signing in for the first time are uploaded into that
   first account.
+
+## Updates
+
+The app checks for a new version when you open it or switch back to it, and
+every hour while it's open, then reloads itself. Your cards and progress are
+never touched by an update.
 
 ## Installing on your phone
 

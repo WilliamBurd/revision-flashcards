@@ -12,6 +12,7 @@ interface Props {
   tagSuggestions: string[]
   onSave: (lines: ReturnType<typeof parseBulk>, shared: SharedValues, reverse: boolean) => Promise<void>
   onSharedChange?: (shared: SharedValues) => void
+  hideSet?: boolean
 }
 
 const SEPARATORS: { value: Separator; label: string }[] = [
@@ -22,7 +23,7 @@ const SEPARATORS: { value: Separator; label: string }[] = [
 ]
 
 /** Paste many lines, one card per line, with a preview before saving. */
-export default function BulkAdd({ initial, subjects, sets, tagSuggestions, onSave, onSharedChange }: Props) {
+export default function BulkAdd({ initial, subjects, sets, tagSuggestions, onSave, onSharedChange, hideSet }: Props) {
   const [text, setText] = useState('')
   const [sep, setSep] = useState<Separator>('auto')
   const [custom, setCustom] = useState('')
@@ -110,7 +111,7 @@ export default function BulkAdd({ initial, subjects, sets, tagSuggestions, onSav
           <span className="block text-sm text-muted">For Front - Back lines, not blanks cards</span>
         </span>
       </label>
-      <SharedFields subjects={subjects} sets={sets} values={shared} suggestions={tagSuggestions} onChange={changeShared} />
+      <SharedFields subjects={subjects} sets={sets} values={shared} suggestions={tagSuggestions} onChange={changeShared} hideSet={hideSet} />
 
       <div className="flex items-center gap-3">
         <button type="submit" className={`${btn.primary} flex-1 sm:flex-none`} disabled={!good.length || !shared.setId || saving}>

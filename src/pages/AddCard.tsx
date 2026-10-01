@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import BulkAdd from '../components/BulkAdd'
 import CardForm, { type SharedValues } from '../components/CardForm'
-import { CloseIcon } from '../components/Icons'
+import { ChevronIcon, CloseIcon } from '../components/Icons'
 import ClozeForm from '../components/ClozeForm'
 import { btn, input, panel } from '../components/ui'
 import { useLibrary, useTags } from '../db/hooks'
@@ -25,10 +25,11 @@ export default function AddCard() {
   const { subjects, sets } = library
 
   if (sets.length === 0) return <FirstSet hasSubject={subjects[0]?.id} />
-  return <QuickAdd subjects={subjects} sets={sets} wanted={params.get('set') ?? getLastSetId()} />
+  const fromLink = params.get('set')
+  return <QuickAdd subjects={subjects} sets={sets} wanted={fromLink ?? getLastSetId()} picked={!!fromLink && sets.some((s) => s.id === fromLink)} />
 }
 
-function QuickAdd({ subjects, sets, wanted }: { subjects: Subject[]; sets: CardSet[]; wanted: string | null }) {
+function QuickAdd({ subjects, sets, wanted, picked }: { subjects: Subject[]; sets: CardSet[]; wanted: string | null; picked: boolean }) {
   // Start with the set from the link, else the last one used, else the first.
   // Worked out once, so later changes to the database don't reset the form.
   const [shared, setShared] = useState<SharedValues>(() => ({
@@ -36,16 +37,49 @@ function QuickAdd({ subjects, sets, wanted }: { subjects: Subject[]; sets: CardS
     tags: [],
   }))
   const [tab, setTab] = useState<Tab>('card')
+  // Coming from a set's "Add cards" button, the set is already chosen.
+  const [choosing, setChoosing] = useState(!picked)
   const tags = useTags()
   const onSharedChange = (next: SharedValues) => {
     setShared(next)
     setLastSetId(next.setId)
   }
-  const common = { subjects, sets, tagSuggestions: tags, onSharedChange }
+  const common = { subjects, sets, tagSuggestions: tags, onSharedChange, hideSet: true }
+  const set = sets.find((s) => s.id === shared.setId) ?? sets[0]
+  const subject = subjects.find((s) => s.id === set.subject_id)
+
+  if (choosing) {
+    return (
+      <div className="py-6">
+        <AddHeader />
+        <SetPicker
+          subjects={subjects}
+          sets={sets}
+          current={getLastSetId()}
+          onPick={(setId) => {
+            onSharedChange({ ...shared, setId })
+            setChoosing(false)
+          }}
+        />
+      </div>
+    )
+  }
 
   return (
-    <div className="py-6">
+    // Keyed by set, so each form starts fresh in the set just picked.
+    <div className="py-6" key={shared.setId}>
       <AddHeader />
+      <div className="card mb-4 flex items-center gap-3 px-4 py-2.5">
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span className="text-xs font-semibold text-muted">Adding to</span>
+          <span className="truncate font-semibold">
+            {subject?.name} · {set.name}
+          </span>
+        </span>
+        <button type="button" className={`${btn.ghost} -mr-2 shrink-0 text-accent`} onClick={() => setChoosing(true)}>
+          Change
+        </button>
+      </div>
       <div role="tablist" aria-label="Kind of card" className="mb-6 grid grid-cols-3 gap-1 rounded-btn bg-raised p-1">
         {TABS.map((t) => (
           <button
@@ -101,6 +135,40 @@ function QuickAdd({ subjects, sets, wanted }: { subjects: Subject[]; sets: CardS
           }}
         />
       )}
+    </div>
+  )
+}
+
+/** Step one of adding: which set the cards go in. */
+function SetPicker({ subjects, sets, current, onPick }: { subjects: Subject[]; sets: CardSet[]; current: string | null; onPick: (setId: string) => void }) {
+  return (
+    <div className="flex flex-col gap-4">
+      <p className="text-muted">Which set are these cards for?</p>
+      {subjects.map((subject) => {
+        const inSubject = sets.filter((s) => s.subject_id === subject.id)
+        if (!inSubject.length) return null
+        return (
+          <section key={subject.id} aria-label={subject.name} className="card overflow-hidden">
+            <h2 className="font-display border-b border-line px-4 py-2 text-base">{subject.name}</h2>
+            <ul className="divide-y divide-line">
+              {inSubject.map((set) => (
+                <li key={set.id}>
+                  <button
+                    type="button"
+                    onClick={() => onPick(set.id)}
+                    className="flex min-h-14 w-full items-center gap-3 px-4 text-left font-semibold hover:bg-raised"
+                  >
+                    <span className="min-w-0 flex-1 truncate">{set.name}</span>
+                    {set.id === current && <span className="shrink-0 text-xs font-normal text-muted">Last used</span>}
+                    <ChevronIcon width={18} height={18} className="shrink-0 text-muted" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )
+      })}
+      <p className="text-sm text-muted">To make a new set, use "+ New set" under a subject on Home.</p>
     </div>
   )
 }
