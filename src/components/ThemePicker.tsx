@@ -11,6 +11,9 @@ const SWATCHES: Record<ThemeChoice, { page: string; surface: string; accent: str
   ocean: { page: '#e6f3f5', surface: '#ffffff', accent: '#0a7d8c', dots: ['#c43c4f', '#2a62c9'] },
   arcade: { page: '#0b0b10', surface: '#16161e', accent: '#c6f432', dots: ['#ff5fd2', '#4fd8ff'] },
   clean: { page: '#f5f5f5', surface: '#ffffff', accent: '#111111', dots: ['#c9401a', '#1f5fbf'] },
+  forest: { page: '#14201b', surface: '#1c2b24', accent: '#e9c46a', dots: ['#f28f6b', '#8fb8de'] },
+  slate: { page: '#2e3440', surface: '#3b4252', accent: '#88c0d0', dots: ['#e8a07c', '#81a1c1'] },
+  dusk: { page: '#231d30', surface: '#30283f', accent: '#ff9e7a', dots: ['#ff9e7a', '#8fb4ff'] },
 }
 
 export default function ThemePicker({ open, onClose }: { open: boolean; onClose: () => void }) {

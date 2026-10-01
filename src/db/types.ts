@@ -111,5 +111,5 @@ export interface Settings {
   /** Extra new cards allowed today, from the "Learn more new cards" button. */
   extra_new_cards: { day: string; count: number }
   /** Phase 4 syncs this; for now the theme lives on each device (lib/theme.ts). */
-  theme: 'auto' | 'colourful' | 'midnight' | 'notebook' | 'ocean' | 'arcade' | 'clean'
+  theme: 'auto' | 'colourful' | 'midnight' | 'notebook' | 'ocean' | 'arcade' | 'clean' | 'forest' | 'slate' | 'dusk'
 }
