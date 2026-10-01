@@ -1,7 +1,7 @@
 // The app's looks. The choice is remembered on this device; "auto"
 // follows the device's light or dark setting.
 
-export type ThemeChoice = 'auto' | 'colourful' | 'midnight' | 'notebook' | 'ocean' | 'arcade' | 'clean'
+export type ThemeChoice = 'auto' | 'colourful' | 'midnight' | 'notebook' | 'ocean' | 'arcade' | 'clean' | 'forest' | 'slate' | 'dusk'
 export type ThemeName = Exclude<ThemeChoice, 'auto'>
 
 export const THEMES: { id: ThemeChoice; name: string; description: string }[] = [
@@ -12,6 +12,9 @@ export const THEMES: { id: ThemeChoice; name: string; description: string }[] = 
   { id: 'ocean', name: 'Ocean', description: 'Calm teal and white, with soft round corners' },
   { id: 'arcade', name: 'Arcade', description: 'Black with neon lime, pink and blue' },
   { id: 'clean', name: 'Clean', description: 'Plain black and white, sharp and simple' },
+  { id: 'forest', name: 'Forest', description: 'Deep green with gold, cosy and calm' },
+  { id: 'slate', name: 'Slate', description: 'Soft grey-blue, not too dark and not too bright' },
+  { id: 'dusk', name: 'Dusk', description: 'Dark plum with a warm peach glow' },
 ]
 
 const KEY = 'theme'
