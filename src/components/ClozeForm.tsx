@@ -21,6 +21,7 @@ interface Props {
   onSave: (values: ClozeValues) => Promise<void>
   onCancel?: () => void
   onSharedChange?: (shared: SharedValues) => void
+  hideSet?: boolean
 }
 
 /**
@@ -28,7 +29,7 @@ interface Props {
  * hide. Each hidden word (or run of words next to each other) becomes its
  * own card asking you to fill it in. Typing {{braces}} works too.
  */
-export default function ClozeForm({ mode, initial, subjects, sets, tagSuggestions, onSave, onCancel, onSharedChange }: Props) {
+export default function ClozeForm({ mode, initial, subjects, sets, tagSuggestions, onSave, onCancel, onSharedChange, hideSet }: Props) {
   const [draft, setDraft] = useState<ClozeDraft>(() => parseCloze(initial.front))
   const [step, setStep] = useState<'write' | 'pick'>(() => (parseCloze(initial.front).blanks.length ? 'pick' : 'write'))
   const [extra, setExtra] = useState(initial.extra)
@@ -183,7 +184,7 @@ export default function ClozeForm({ mode, initial, subjects, sets, tagSuggestion
               + Add a note to show with the answer
             </button>
           )}
-          <SharedFields subjects={subjects} sets={sets} values={shared} suggestions={tagSuggestions} onChange={changeShared} />
+          <SharedFields subjects={subjects} sets={sets} values={shared} suggestions={tagSuggestions} onChange={changeShared} hideSet={hideSet} />
 
           <div className="flex items-center gap-3">
             <button type="submit" className={`${btn.primary} flex-1 sm:flex-none`} disabled={!canSave} title="Ctrl+Enter">

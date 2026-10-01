@@ -61,17 +61,32 @@ export default function Home() {
       ) : (
         <>
           {readyTotal > 0 ? (
-            <Link
-              to="/review"
-              className="hero-shadow flex min-h-20 items-center gap-4 rounded-card bg-accent px-5 py-4 text-on-accent transition hover:bg-accent-strong active:scale-[0.99]"
-            >
-              <span className="flex min-w-0 flex-1 flex-col">
-                <span className="text-xl font-bold">Review all due</span>
-                <span className="text-sm opacity-85">{readySummary(ready.due, ready.newToday)}</span>
-              </span>
-              <span className="font-display text-4xl">{readyTotal}</span>
-              <ChevronIcon width={22} height={22} strokeWidth={2.5} />
-            </Link>
+            <div className="flex flex-col gap-3">
+              {subjects.map((subject, i) => {
+                const subjectReady = readyCount(
+                  overview,
+                  sets.filter((s) => s.subject_id === subject.id).map((s) => s.id),
+                )
+                const total = subjectReady.due + subjectReady.newToday
+                if (total === 0) return null
+                const colour = (i % 4) + 1
+                return (
+                  <Link
+                    key={subject.id}
+                    to={`/review?subject=${subject.id}`}
+                    className="hero-shadow flex min-h-20 items-center gap-4 rounded-card px-5 py-4 transition hover:brightness-110 active:scale-[0.99]"
+                    style={{ background: `var(--subject-${colour}-badge)`, color: `var(--subject-${colour}-badge-ink)` }}
+                  >
+                    <span className="flex min-w-0 flex-1 flex-col">
+                      <span className="truncate text-xl font-bold">Review {subject.name}</span>
+                      <span className="text-sm opacity-85">{readySummary(subjectReady.due, subjectReady.newToday)}</span>
+                    </span>
+                    <span className="font-display text-4xl">{total}</span>
+                    <ChevronIcon width={22} height={22} strokeWidth={2.5} />
+                  </Link>
+                )
+              })}
+            </div>
           ) : (
             <div className="card flex min-h-20 flex-col justify-center px-5 py-4">
               <span className="text-lg font-bold">All caught up</span>
@@ -81,11 +96,6 @@ export default function Home() {
 
           {subjects.map((subject, i) => {
             const subjectSets = sets.filter((s) => s.subject_id === subject.id)
-            const subjectReady = readyCount(
-              overview,
-              subjectSets.map((s) => s.id),
-            )
-            const subjectTotal = subjectReady.due + subjectReady.newToday
             const colour = (i % 4) + 1
             const exam = nextExam(subject.exam_dates, Date.now())
             return (
@@ -101,14 +111,6 @@ export default function Home() {
                     </h2>
                     {exam && <span className="truncate text-sm opacity-80">{examCountdown(exam.name, daysUntil(exam.start, Date.now()))}</span>}
                   </div>
-                  {subjectTotal > 0 && (
-                    <Link
-                      to={`/review?subject=${subject.id}`}
-                      className="inline-flex min-h-11 items-center rounded-btn px-3 text-sm font-semibold hover:bg-black/5"
-                    >
-                      Review {subjectTotal}
-                    </Link>
-                  )}
                   <button
                     type="button"
                     className="inline-flex h-11 w-11 items-center justify-center rounded-btn hover:bg-black/5"

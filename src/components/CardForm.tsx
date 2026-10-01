@@ -27,6 +27,7 @@ interface Props {
   onCancel?: () => void
   /** Called when the set or tags change, so the Add screen can keep them. */
   onSharedChange?: (shared: SharedValues) => void
+  hideSet?: boolean
 }
 
 /**
@@ -34,7 +35,7 @@ interface Props {
  * In add mode, saving clears Front and Back, keeps the set and tags, and
  * puts the cursor back in Front so you can add card after card.
  */
-export default function CardForm({ mode, initial, subjects, sets, tagSuggestions, onSave, onCancel, onSharedChange }: Props) {
+export default function CardForm({ mode, initial, subjects, sets, tagSuggestions, onSave, onCancel, onSharedChange, hideSet }: Props) {
   const [values, setValues] = useState(initial)
   const [saving, setSaving] = useState(false)
   const [added, setAdded] = useState(0)
@@ -117,7 +118,7 @@ export default function CardForm({ mode, initial, subjects, sets, tagSuggestions
           <span className="block text-sm text-muted">Shows the Back and asks for the Front</span>
         </span>
       </label>
-      <SharedFields subjects={subjects} sets={sets} values={values} suggestions={tagSuggestions} onChange={change} />
+      <SharedFields subjects={subjects} sets={sets} values={values} suggestions={tagSuggestions} onChange={change} hideSet={hideSet} />
 
       <div className="flex items-center gap-3">
         <button type="submit" className={`${btn.primary} flex-1 sm:flex-none`} disabled={!canSave} title="Ctrl+Enter">
@@ -157,10 +158,12 @@ export function SharedFields(props: {
   values: SharedValues
   suggestions: string[]
   onChange: (shared: Partial<SharedValues>) => void
+  /** The Add screen picks the set first, at the top, so it isn't asked again here. */
+  hideSet?: boolean
 }) {
   return (
     <>
-      <div>
+      <div hidden={props.hideSet}>
         <label htmlFor="card-set" className={label}>
           Set
         </label>
