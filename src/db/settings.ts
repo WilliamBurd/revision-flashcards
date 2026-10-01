@@ -8,7 +8,7 @@ export const DEFAULT_SETTINGS: Settings = {
   ...DEFAULT_SCHEDULER_SETTINGS,
   new_cards_per_day_total: 20,
   extra_new_cards: { day: '', count: 0 },
-  theme: 'system',
+  theme: 'auto',
 }
 
 export const DEFAULT_NEW_CARDS_PER_SET = 20

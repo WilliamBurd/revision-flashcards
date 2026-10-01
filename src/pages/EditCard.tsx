@@ -17,7 +17,7 @@ export default function EditCard() {
 
   if (!library || note === undefined) return null
   if (!note || note.deleted) {
-    return <p className="py-6 text-slate-600 dark:text-slate-300">This card has been deleted.</p>
+    return <p className="py-6 text-muted">This card has been deleted.</p>
   }
 
   return (
@@ -34,7 +34,7 @@ export default function EditCard() {
           navigate(-1)
         }}
       />
-      <button type="button" className={`${btn.ghost} mt-8 text-rose-600 dark:text-rose-400`} onClick={() => setConfirming(true)}>
+      <button type="button" className={`${btn.ghost} mt-8 text-danger`} onClick={() => setConfirming(true)}>
         Delete card
       </button>
       <ConfirmDialog

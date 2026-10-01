@@ -56,9 +56,19 @@ export default function Review() {
         <Link to="/" className={btn.icon} aria-label="End review" title="Escape">
           <CloseIcon />
         </Link>
-        <p className="flex-1 text-center text-sm text-slate-500 dark:text-slate-400" aria-live="polite">
-          {showingCard ? `${state.remaining} to go` : ''}
-        </p>
+        <div className="flex flex-1 flex-col items-center gap-1.5">
+          <p className="text-sm font-semibold text-muted" aria-live="polite">
+            {showingCard ? `${state.remaining} to go` : ''}
+          </p>
+          {showingCard && (
+            <div className="h-1.5 w-40 overflow-hidden rounded-full bg-line" aria-hidden="true">
+              <div
+                className="h-full rounded-full bg-accent transition-[width]"
+                style={{ width: `${(reviewed / (reviewed + state.remaining)) * 100}%` }}
+              />
+            </div>
+          )}
+        </div>
         <button
           type="button"
           className={`${btn.icon} ${showingCard ? '' : 'invisible'}`}
@@ -73,26 +83,34 @@ export default function Review() {
       {showingCard && (
         <>
           {/* Tapping anywhere on the card reveals the answer. */}
-          <button
-            type="button"
-            className="mx-auto flex w-full max-w-2xl flex-1 cursor-pointer flex-col overflow-y-auto px-5 py-6 text-left"
-            onClick={() => void reveal()}
-            disabled={state.phase === 'answer'}
-            aria-label={state.phase === 'question' ? 'Show answer' : undefined}
-          >
-            <p className="text-xl leading-relaxed font-medium break-words whitespace-pre-wrap sm:text-2xl">{state.note.front}</p>
-            {state.phase === 'answer' && (
-              <>
-                <hr className="my-6 border-slate-200 dark:border-slate-800" />
-                <p className="text-xl leading-relaxed break-words whitespace-pre-wrap sm:text-2xl">{state.note.back}</p>
-              </>
-            )}
-          </button>
+          <div className="mx-auto flex min-h-0 w-full max-w-2xl flex-1 px-4 pt-2 pb-4">
+            <button
+              type="button"
+              className="card flex w-full cursor-pointer flex-col items-start gap-5 overflow-y-auto px-6 py-7 text-left"
+              onClick={() => void reveal()}
+              disabled={state.phase === 'answer'}
+              aria-label={state.phase === 'question' ? 'Show answer' : undefined}
+            >
+              <span className="rounded-full px-2.5 py-1 text-xs font-bold tracking-wider uppercase bg-raised text-muted">Question</span>
+              <p className="font-display text-2xl leading-snug break-words whitespace-pre-wrap sm:text-[1.75rem]">
+                {state.note.front}
+              </p>
+              {state.phase === 'answer' ? (
+                <>
+                  <span className="h-px w-full bg-line" />
+                  <span className="rounded-full px-2.5 py-1 text-xs font-bold tracking-wider uppercase bg-accent-soft text-on-accent-soft">Answer</span>
+                  <p className="text-xl leading-relaxed break-words whitespace-pre-wrap sm:text-2xl">{state.note.back}</p>
+                </>
+              ) : (
+                <span className="mt-auto self-center text-sm text-muted">Tap to reveal</span>
+              )}
+            </button>
+          </div>
 
-          <div className="pb-safe border-t border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-            <div className="mx-auto max-w-2xl p-3">
+          <div className="pb-safe">
+            <div className="mx-auto max-w-2xl px-4 pb-4">
               {state.phase === 'question' ? (
-                <button type="button" className={`${btn.primary} min-h-16 w-full text-lg`} onClick={() => void reveal()} title="Space">
+                <button type="button" className={`${btn.primary} min-h-17 w-full text-lg`} onClick={() => void reveal()} title="Space">
                   Show answer
                 </button>
               ) : (
@@ -105,7 +123,7 @@ export default function Review() {
 
       {state.phase === 'waiting' && (
         <Finished reviewed={reviewed}>
-          <p className="text-slate-600 dark:text-slate-300">
+          <p className="text-muted">
             Your next card is back in {formatInterval(state.nextDue - Date.now())}. Stay here and it will appear, or come back later.
           </p>
         </Finished>
@@ -115,7 +133,7 @@ export default function Review() {
         <Finished reviewed={reviewed}>
           {state.newHeldBack > 0 ? (
             <>
-              <p className="text-slate-600 dark:text-slate-300">
+              <p className="text-muted">
                 You've reached today's new card limit. {state.newHeldBack} new{' '}
                 {state.newHeldBack === 1 ? 'card is' : 'cards are'} still waiting.
               </p>
@@ -124,7 +142,7 @@ export default function Review() {
               </button>
             </>
           ) : (
-            <p className="text-slate-600 dark:text-slate-300">Nothing else is due. Nice work.</p>
+            <p className="text-muted">Nothing else is due. Nice work.</p>
           )}
         </Finished>
       )}
@@ -152,7 +170,7 @@ export default function Review() {
 function Finished({ reviewed, children }: { reviewed: number; children: ReactNode }) {
   return (
     <div className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
-      <h1 className="text-2xl font-bold">{reviewed > 0 ? `${reviewed} ${reviewed === 1 ? 'card' : 'cards'} reviewed` : 'All caught up'}</h1>
+      <h1 className="text-3xl">{reviewed > 0 ? `${reviewed} ${reviewed === 1 ? 'card' : 'cards'} reviewed` : 'All caught up'}</h1>
       {children}
       <Link to="/" className={btn.primary}>
         Back to home

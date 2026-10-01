@@ -60,7 +60,7 @@ function FirstSet({ hasSubject }: { hasSubject: string | undefined }) {
           setLastSetId(set.id)
         }}
       >
-        <p className="text-slate-600 dark:text-slate-300">Cards go into a set. Create one to get started.</p>
+        <p className="text-muted">Cards go into a set. Create one to get started.</p>
         {!hasSubject && (
           <div>
             <label htmlFor="first-subject" className="mb-1 block text-sm font-medium">

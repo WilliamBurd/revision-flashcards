@@ -104,5 +104,6 @@ export interface Settings {
   new_cards_per_day_total: number
   /** Extra new cards allowed today, from the "Learn more new cards" button. */
   extra_new_cards: { day: string; count: number }
-  theme: 'system' | 'light' | 'dark'
+  /** Phase 4 syncs this; for now the theme lives on each device (lib/theme.ts). */
+  theme: 'auto' | 'colourful' | 'midnight' | 'notebook'
 }

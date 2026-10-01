@@ -20,7 +20,14 @@ export interface SetCounts {
   new: number
   /** New cards that can still be introduced today in this set. */
   newToday: number
+  /** Studied, but not yet on a 3-week-plus interval. */
+  learning: number
+  /** On an interval of 3 weeks or more. */
+  known: number
 }
+
+/** A card counts as "known" once its interval reaches this many days. */
+export const KNOWN_INTERVAL_DAYS = 21
 
 interface Budget {
   newRemainingTotal: number
@@ -75,13 +82,16 @@ export async function getOverview(now = Date.now()): Promise<StudyOverview> {
   const endOfDay = nextDayStart(now)
 
   const bySet = new Map<string, SetCounts>()
-  for (const set of sets) bySet.set(set.id, { total: 0, due: 0, new: 0, newToday: 0 })
+  for (const set of sets) bySet.set(set.id, { total: 0, due: 0, new: 0, newToday: 0, learning: 0, known: 0 })
   for (const card of cards) {
     const counts = bySet.get(card.set_id)
     if (!counts) continue
     counts.total++
     if (card.state === CardState.New) counts.new++
-    else if (card.state === CardState.Review ? card.due < endOfDay : card.due <= now) counts.due++
+    else if (card.state === CardState.Review && card.scheduled_days >= KNOWN_INTERVAL_DAYS) counts.known++
+    else counts.learning++
+    if (card.state === CardState.New) continue
+    if (card.state === CardState.Review ? card.due < endOfDay : card.due <= now) counts.due++
   }
   for (const [setId, counts] of bySet) {
     counts.newToday = Math.min(counts.new, budget.newRemainingBySet.get(setId) ?? 0, budget.newRemainingTotal)
