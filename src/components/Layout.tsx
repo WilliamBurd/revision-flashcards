@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { NavLink, Outlet, useLocation, useOutletContext } from 'react-router-dom'
 import { ChartIcon, HomeIcon, PaletteIcon, PlusIcon, SearchIcon } from './Icons'
+import AccountDialog from './AccountDialog'
+import SyncBadge from './SyncBadge'
 import ThemePicker from './ThemePicker'
 
 const TABS = [
@@ -12,6 +14,7 @@ const TABS = [
 
 interface LayoutContext {
   openThemePicker: () => void
+  openAccount: () => void
 }
 
 export function useLayout() {
@@ -22,6 +25,7 @@ export function useLayout() {
 export default function Layout() {
   const { pathname } = useLocation()
   const [themeOpen, setThemeOpen] = useState(false)
+  const [accountOpen, setAccountOpen] = useState(false)
   const showQuickAdd = pathname !== '/add' && !pathname.endsWith('/edit')
 
   return (
@@ -46,10 +50,13 @@ export default function Layout() {
             {label}
           </NavLink>
         ))}
+        <div className="mt-auto mb-2 px-1">
+          <SyncBadge onClick={() => setAccountOpen(true)} />
+        </div>
         <button
           type="button"
           onClick={() => setThemeOpen(true)}
-          className="mt-auto flex min-h-11 items-center gap-3 rounded-btn px-3 font-semibold text-muted hover:bg-raised hover:text-ink"
+          className="flex min-h-11 items-center gap-3 rounded-btn px-3 font-semibold text-muted hover:bg-raised hover:text-ink"
         >
           <PaletteIcon width={20} height={20} />
           Theme
@@ -57,7 +64,9 @@ export default function Layout() {
       </nav>
 
       <main className="mx-auto w-full max-w-3xl px-4 pt-safe pb-32 lg:px-8 lg:pb-12">
-        <Outlet context={{ openThemePicker: () => setThemeOpen(true) } satisfies LayoutContext} />
+        <Outlet
+          context={{ openThemePicker: () => setThemeOpen(true), openAccount: () => setAccountOpen(true) } satisfies LayoutContext}
+        />
       </main>
 
       {showQuickAdd && (
@@ -94,6 +103,7 @@ export default function Layout() {
       </nav>
 
       <ThemePicker open={themeOpen} onClose={() => setThemeOpen(false)} />
+      <AccountDialog open={accountOpen} onClose={() => setAccountOpen(false)} />
     </div>
   )
 }

@@ -4,6 +4,7 @@ import ConfirmDialog from '../components/ConfirmDialog'
 import { ProgressBar, ProgressKey } from '../components/Counts'
 import { ChevronIcon, MoreIcon, PaletteIcon } from '../components/Icons'
 import { useLayout } from '../components/Layout'
+import SyncBadge from '../components/SyncBadge'
 import Modal from '../components/Modal'
 import NameDialog from '../components/NameDialog'
 import { btn } from '../components/ui'
@@ -23,7 +24,7 @@ export default function Home() {
   const library = useLibrary()
   const overview = useOverview()
   const [dialog, setDialog] = useState<Dialog | null>(null)
-  const { openThemePicker } = useLayout()
+  const { openThemePicker, openAccount } = useLayout()
   const close = () => setDialog(null)
 
   if (!library || !overview) return null
@@ -36,14 +37,17 @@ export default function Home() {
 
   return (
     <div className="flex flex-col gap-5 py-6 lg:py-10">
-      <div className="flex items-end gap-3">
-        <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <span className="text-sm font-semibold text-muted">{today()}</span>
-          <h1 className="text-3xl tracking-tight lg:text-4xl">Revision</h1>
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-2">
+          <span className="min-w-0 flex-1 truncate text-sm font-semibold text-muted">{today()}</span>
+          <div className="-my-2 flex items-center gap-1 lg:hidden">
+            <SyncBadge onClick={openAccount} />
+            <button type="button" className={btn.icon} aria-label="Change theme" onClick={openThemePicker}>
+              <PaletteIcon />
+            </button>
+          </div>
         </div>
-        <button type="button" className={`${btn.icon} lg:hidden`} aria-label="Change theme" onClick={openThemePicker}>
-          <PaletteIcon />
-        </button>
+        <h1 className="text-3xl tracking-tight lg:text-4xl">Revision</h1>
       </div>
 
       {subjects.length === 0 ? (

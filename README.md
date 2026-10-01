@@ -5,9 +5,10 @@ spaced repetition (the FSRS algorithm) so each review shows the cards you're
 closest to forgetting. It works on a phone and a desktop, and everything is
 saved on the device, so it works with no signal.
 
-**Status: Phase 1.** Subjects, sets, quick add, editing and FSRS review all
-work, with everything saved on this device. Install-to-home-screen, login and
-syncing between devices come in Phase 2.
+**Status: Phase 2.** Subjects, sets, quick add, editing and FSRS review all
+work. Anyone can create an account with an email and password; each person's
+cards sync between their devices and nobody can see anyone else's. The app
+installs to your home screen and works with no signal.
 
 ## Using it
 
@@ -94,13 +95,69 @@ link (Vercel posts it on the pull request). There's nothing to run by hand.
 `vercel.json` makes sure links like `/sets/...` load the app instead of a
 404 page.
 
-Setting up Supabase for syncing will be added here in Phase 2.
+## Setting up accounts and syncing (Supabase)
+
+Accounts and syncing use a free [Supabase](https://supabase.com) project.
+Until it's set up, the app still works, but only on one device and with no
+login. You only do this once.
+
+1. **Create the project.** Sign in at supabase.com, click **New project**,
+   give it a name (e.g. `revision-flashcards`), choose a database password
+   (save it somewhere; the app doesn't need it) and the region nearest you
+   (e.g. London), then **Create new project**. Wait a minute while it starts.
+2. **Create the tables.** In the left sidebar open **SQL Editor**, click
+   **New query**, paste in the whole of [`supabase/schema.sql`](supabase/schema.sql)
+   and click **Run**. It should say "Success. No rows returned". This makes
+   the tables and the rules that keep each person's cards private.
+3. **Let friends sign up without an email link.** Open **Authentication >
+   Sign In / Providers** (called **Providers > Email** in some versions) and
+   turn **off** "Confirm email", then **Save**. Supabase's free email
+   service only sends to the project owner's address, so with confirmation
+   on, your friends would never get their link.
+4. **Copy the keys.** Open **Project Settings > API** (or click **Connect**
+   at the top). Copy the **Project URL** and the **anon public** key. The
+   anon key is safe to put in the app: the rules from step 2 are what
+   protect the data.
+5. **Give the keys to Vercel.** In your Vercel project open **Settings >
+   Environment Variables** and add two variables, ticking Production,
+   Preview and Development for each:
+   - `VITE_SUPABASE_URL` = the Project URL
+   - `VITE_SUPABASE_ANON_KEY` = the anon public key
+
+   Then open **Deployments**, click **⋯** on the latest one and choose
+   **Redeploy**. The app now shows a sign-in screen.
+6. **For local development** (optional), copy `.env.example` to
+   `.env.local` and paste the same two values in.
+
+### How syncing works
+
+- Everything is saved on the device first, so the app works offline. Each
+  change is marked as waiting to upload.
+- When online, the app uploads waiting changes and downloads anything new
+  shortly after each change, when you reopen it, when you come back online,
+  and every 30 seconds while it's open. A card added on your laptop shows up
+  on your phone within about 30 seconds.
+- The small badge at the top of Home says **Synced**, **3 to sync**, or
+  **Offline**. Tap it to sync now or sign out.
+- If the same card was edited on two devices, the most recent edit wins. If
+  it was *reviewed* on two devices while offline, both reviews are kept and
+  the card's schedule is rebuilt from them in time order.
+- Signing out removes your cards from that device (they stay in your
+  account), so a friend can sign in on the same phone without seeing them.
+  Cards made before signing in for the first time are uploaded into that
+  first account.
+
+## Installing on your phone
+
+Open the site in Chrome on Android, tap **⋮** then **Install app** (or **Add
+to Home screen**). It then opens full screen from its own icon, and works
+with no signal once it has been opened online at least once.
 
 ## Where your data lives
 
-Cards and progress are stored in your browser's IndexedDB, on that device
-only, until syncing arrives in Phase 2. Clearing the browser's site data
-for this app deletes them.
+Cards and progress are stored in the browser's IndexedDB on each device, and
+in your Supabase project once you're signed in. Clearing the browser's site
+data only removes the copy on that device; signing in again downloads it.
 
 ## How the code is organised
 
@@ -115,7 +172,12 @@ src/
 │   └── settings.ts  scheduling settings and the last-used set
 ├── scheduler/   the FSRS wrapper (built on ts-fsrs) and interval labels
 ├── session/     which card comes next in a review, and the review state
-├── lib/         small helpers (IDs, when the study day starts)
+├── sync/        accounts and syncing with Supabase
+│   ├── engine.ts           upload, download, merge, and when to sync
+│   ├── replay.ts           rebuilds a card's schedule from its review history
+│   ├── remote.ts           talks to Supabase
+│   └── AccountProvider.tsx sign in / sign up / sign out for the app
+├── lib/         small helpers (IDs, when the study day starts, themes)
 ├── components/  shared pieces of the interface
 └── pages/       one file per screen
 ```
@@ -124,5 +186,6 @@ A **note** is what you type in; a **card** is what gets studied. For now one
 note makes one card. Phase 3 adds reversed and cloze cards, where one note
 can make several.
 
-Every record has an ID made on the device plus `created_at`, `updated_at`
-and a `deleted` flag, so syncing in Phase 2 needs no changes to stored data.
+Every record has an ID made on the device plus `created_at`, `updated_at`,
+a `deleted` flag (so deletions sync) and a `dirty` flag (changes not yet
+uploaded). `supabase/schema.sql` is the matching cloud database.
