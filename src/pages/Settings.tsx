@@ -6,6 +6,7 @@ import { download, exportBackup, importBackup, readBackup, BackupError, type Imp
 import { getSettings, updateSettings } from '../db/settings'
 import { useAccount } from '../sync/AccountProvider'
 import { dayKey } from '../lib/day'
+import { installApp, useInstallState } from '../lib/install'
 
 export default function Settings() {
   const settings = useLiveQuery(() => getSettings())
@@ -65,6 +66,10 @@ export default function Settings() {
         </button>
       </Section>
 
+      <Section title="Home screen">
+        <InstallApp />
+      </Section>
+
       {configured && (
         <Section title="Account">
           <p className="text-sm text-muted">
@@ -80,6 +85,28 @@ export default function Settings() {
         <Backup />
       </Section>
     </div>
+  )
+}
+
+function InstallApp() {
+  const state = useInstallState()
+  if (state === 'installed') return <p className="text-sm text-muted">The app is on your home screen.</p>
+  if (state === 'ready') {
+    return (
+      <>
+        <p className="text-sm text-muted">Put Burdis Flashcards on your home screen so it opens full screen like a normal app.</p>
+        <button type="button" className={`${btn.primary} self-start`} onClick={() => void installApp()}>
+          Add to home screen
+        </button>
+      </>
+    )
+  }
+  return (
+    <p className="text-sm text-muted">
+      In Chrome, open the ⋮ menu and choose <span className="font-semibold text-ink">Add to Home screen</span> or{' '}
+      <span className="font-semibold text-ink">Install app</span>. If it's already installed, open it from your home screen
+      or app drawer.
+    </p>
   )
 }
 
