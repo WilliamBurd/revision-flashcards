@@ -17,6 +17,11 @@ interface Account {
   signUp: (email: string, password: string) => Promise<boolean>
   signOut: () => Promise<void>
   syncNow: () => Promise<void>
+  /** Email a link for choosing a new password. */
+  sendPasswordReset: (email: string) => Promise<void>
+  /** True after opening that link: the app asks for a new password. */
+  recovering: boolean
+  setNewPassword: (password: string) => Promise<void>
 }
 
 const OFFLINE_STATUS: SyncStatus = { state: 'idle', pending: 0, lastSyncedAt: null, error: null }
@@ -56,6 +61,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(supabase !== null)
   const [status, setStatus] = useState<SyncStatus>(OFFLINE_STATUS)
+  const [recovering, setRecovering] = useState(false)
   const engine = useRef<SyncEngine | null>(null)
   const userId = session?.user.id ?? null
 
@@ -65,7 +71,11 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       setSession(data.session)
       setLoading(false)
     })
-    const { data } = supabase.auth.onAuthStateChange((_event, s) => setSession(s))
+    const { data } = supabase.auth.onAuthStateChange((event, s) => {
+      setSession(s)
+      // Opening a reset link signs you in for long enough to choose a new password.
+      if (event === 'PASSWORD_RECOVERY') setRecovering(true)
+    })
     return () => data.subscription.unsubscribe()
   }, [])
 
@@ -121,6 +131,17 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     await engine.current?.sync()
   }, [])
 
+  const sendPasswordReset = useCallback(async (email: string) => {
+    const { error } = await supabase!.auth.resetPasswordForEmail(email.trim(), { redirectTo: window.location.origin })
+    if (error) throw new Error(friendlyError(error.message))
+  }, [])
+
+  const setNewPassword = useCallback(async (password: string) => {
+    const { error } = await supabase!.auth.updateUser({ password })
+    if (error) throw new Error(friendlyError(error.message))
+    setRecovering(false)
+  }, [])
+
   const value = useMemo<Account>(
     () => ({
       configured: supabase !== null,
@@ -132,8 +153,11 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       signUp,
       signOut,
       syncNow,
+      sendPasswordReset,
+      recovering,
+      setNewPassword,
     }),
-    [loading, session, status, signIn, signUp, signOut, syncNow],
+    [loading, session, status, signIn, signUp, signOut, syncNow, sendPasswordReset, recovering, setNewPassword],
   )
 
   return <AccountContext.Provider value={value}>{children}</AccountContext.Provider>
@@ -144,6 +168,8 @@ function friendlyError(message: string): string {
   if (/already registered/i.test(message)) return 'There’s already an account with that email. Try signing in.'
   if (/password should be at least/i.test(message)) return 'Your password needs to be at least 6 characters.'
   if (/email not confirmed/i.test(message)) return 'Please confirm your email address first.'
+  if (/rate limit|too many|security purposes/i.test(message)) return 'Too many emails sent. Wait a few minutes and try again.'
+  if (/should be different/i.test(message)) return 'Choose a password different from your old one.'
   if (/fetch|network/i.test(message)) return 'Can’t reach the server. Check your connection and try again.'
   return message
 }

@@ -8,12 +8,13 @@ import Review from './pages/Review'
 import SetPage from './pages/SetPage'
 import Settings from './pages/Settings'
 import Stats from './pages/Stats'
-import Login from './pages/Login'
+import Login, { NewPassword } from './pages/Login'
 import { useAccount } from './sync/AccountProvider'
 
 export default function App() {
-  const { configured, loading, session } = useAccount()
+  const { configured, loading, session, recovering } = useAccount()
   if (loading) return null
+  if (recovering) return <NewPassword />
   // With a cloud account set up, everyone signs in once per device.
   if (configured && !session) return <Login />
 

@@ -50,9 +50,9 @@ export default function Settings() {
           onChange={(n) => void updateSettings({ max_interval_days: n })}
         />
         <NumberSetting
-          label="New cards per day, all sets"
+          label="New cards per day, per subject"
           unit="cards"
-          hint="Each set also has its own limit, on the set's page."
+          hint="Each subject gets this many, so doing History never uses up Politics. Each set also has its own limit, on its page."
           value={settings.new_cards_per_day_total}
           min={0}
           max={999}

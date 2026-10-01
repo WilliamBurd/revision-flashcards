@@ -11,7 +11,8 @@ export default defineConfig({
     // Makes the app installable and lets it open with no connection: a service
     // worker keeps a copy of the app itself, and the cards live in IndexedDB.
     VitePWA({
-      registerType: 'autoUpdate',
+      // 'prompt' lets the app choose when to switch to a new version (see lib/update.ts).
+      registerType: 'prompt',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
         name: 'Burdis Flashcards',

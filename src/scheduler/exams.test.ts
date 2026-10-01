@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { newCardSchedule, makeScheduler, rateCard, DEFAULT_SCHEDULER_SETTINGS } from './fsrs'
-import { daysUntil, examDatesFor, examStart, latestBeforeExam, nextExamStart, settingsForExam } from './exams'
+import { daysUntil, examDatesFor, examStart, latestBeforeExam, nextExam, nextExamStart, settingsForExam } from './exams'
 import type { Card } from '../db/types'
 
 const DAY = 24 * 60 * 60 * 1000
@@ -65,5 +65,15 @@ describe('exam dates', () => {
     const now = at(2027, 5, 9, 20)
     expect(latestBeforeExam(exam, now)).toBeLessThan(exam)
     expect(latestBeforeExam(exam, now)).toBeGreaterThan(now)
+  })
+})
+
+describe('countdown on Home', () => {
+  it('says the exam is today on the day itself, then moves on', () => {
+    const exams = [{ name: 'Paper 1', date: '2027-05-10' }, { name: 'Paper 2', date: '2027-05-20' }]
+    const onTheDay = at(2027, 5, 10, 15)
+    expect(nextExam(exams, onTheDay)?.name).toBe('Paper 1')
+    expect(daysUntil(nextExam(exams, onTheDay)!.start, onTheDay)).toBe(0)
+    expect(nextExam(exams, at(2027, 5, 11, 9))?.name).toBe('Paper 2')
   })
 })

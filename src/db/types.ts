@@ -106,7 +106,7 @@ export interface Settings {
   max_interval_days: number
   learning_steps: string[]
   relearning_steps: string[]
-  /** Cap on new cards per day across all sets (each set also has its own limit). */
+  /** Cap on new cards per day in each subject (each set also has its own limit). */
   new_cards_per_day_total: number
   /** Extra new cards allowed today, from the "Learn more new cards" button. */
   extra_new_cards: { day: string; count: number }

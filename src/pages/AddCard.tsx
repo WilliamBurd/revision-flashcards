@@ -4,6 +4,7 @@ import BulkAdd from '../components/BulkAdd'
 import CardForm, { type SharedValues } from '../components/CardForm'
 import { ChevronIcon, CloseIcon } from '../components/Icons'
 import ClozeForm from '../components/ClozeForm'
+import NameDialog from '../components/NameDialog'
 import { btn, input, panel } from '../components/ui'
 import { useLibrary, useTags } from '../db/hooks'
 import { addNote, addNotes, type NewNote } from '../db/notes'
@@ -141,12 +142,12 @@ function QuickAdd({ subjects, sets, wanted, picked }: { subjects: Subject[]; set
 
 /** Step one of adding: which set the cards go in. */
 function SetPicker({ subjects, sets, current, onPick }: { subjects: Subject[]; sets: CardSet[]; current: string | null; onPick: (setId: string) => void }) {
+  const [newSetIn, setNewSetIn] = useState<Subject | null>(null)
   return (
     <div className="flex flex-col gap-4">
       <p className="text-muted">Which set are these cards for?</p>
       {subjects.map((subject) => {
         const inSubject = sets.filter((s) => s.subject_id === subject.id)
-        if (!inSubject.length) return null
         return (
           <section key={subject.id} aria-label={subject.name} className="card overflow-hidden">
             <h2 className="font-display border-b border-line px-4 py-2 text-base">{subject.name}</h2>
@@ -164,11 +165,32 @@ function SetPicker({ subjects, sets, current, onPick }: { subjects: Subject[]; s
                   </button>
                 </li>
               ))}
+              <li>
+                <button
+                  type="button"
+                  className="min-h-12 w-full px-4 text-left font-semibold text-accent hover:bg-raised"
+                  onClick={() => setNewSetIn(subject)}
+                >
+                  + New set in {subject.name}
+                </button>
+              </li>
             </ul>
           </section>
         )
       })}
-      <p className="text-sm text-muted">To make a new set, use "+ New set" under a subject on Home.</p>
+      <NameDialog
+        open={newSetIn !== null}
+        title={newSetIn ? `New set in ${newSetIn.name}` : ''}
+        label="Set name"
+        placeholder="e.g. Tudors – Henry VII"
+        submitLabel="Create"
+        onSubmit={async (name) => {
+          if (!newSetIn) return
+          const set = await createSet(newSetIn.id, name)
+          onPick(set.id)
+        }}
+        onClose={() => setNewSetIn(null)}
+      />
     </div>
   )
 }

@@ -38,9 +38,12 @@ export function nextExamStart(dates: string[], now: number): number | null {
   return upcoming.length ? Math.min(...upcoming) : null
 }
 
-/** The next exam (with its name) for a subject's countdown on Home. */
+/**
+ * The next exam (with its name) for a subject's countdown on Home. An exam
+ * stays "next" for the whole of its day, so Home can say "Paper 1 today".
+ */
 export function nextExam(exams: ExamDate[], now: number): (ExamDate & { start: number }) | null {
-  const upcoming = exams.map((e) => ({ ...e, start: examStart(e.date) })).filter((e) => e.start > now)
+  const upcoming = exams.map((e) => ({ ...e, start: examStart(e.date) })).filter((e) => e.start + DAY_MS > now)
   upcoming.sort((a, b) => a.start - b.start)
   return upcoming[0] ?? null
 }

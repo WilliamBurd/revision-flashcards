@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { pickNext } from '../session/buildQueue'
 import { db } from './db'
 import { addBasicNote, updateNote } from './notes'
-import { allowMoreNewCards, getOverview, loadQueueInput, recordReview, undoReview } from './study'
+import { allowMoreNewCards, getOverview, loadQueueInput, readyCount, recordReview, undoReview } from './study'
 import { countCardsIn, createSet, createSubject, deleteSubject, setExamDates } from './subjects'
 
 const MIN = 60_000
@@ -138,5 +138,28 @@ describe('cram and undo (Phase 4)', () => {
     await setExamDates(subject.id, [{ name: 'Paper 1', date }])
     expect((await getOverview(now)).bySet.get(set.id)?.due).toBe(0)
     expect((await getOverview(now + 4 * 24 * 3600_000 + 3600_000)).bySet.get(set.id)?.due).toBe(1)
+  })
+})
+
+describe('new card limit per subject', () => {
+  it('gives each subject its own 20 new cards a day', async () => {
+    const history = await createSubject('History')
+    const politics = await createSubject('Politics')
+    const tudors = await createSet(history.id, 'Tudors')
+    const stuarts = await createSet(history.id, 'Stuarts')
+    const uk = await createSet(politics.id, 'UK')
+    for (let i = 0; i < 15; i++) {
+      await addBasicNote(tudors.id, `T${i}`, 'A')
+      await addBasicNote(stuarts.id, `S${i}`, 'A')
+      await addBasicNote(uk.id, `U${i}`, 'A')
+    }
+    // Study 20 new History cards.
+    for (const c of (await db.cards.toArray()).filter((c) => c.set_id !== uk.id).slice(0, 20)) await recordReview(c.id, 3, 1000)
+
+    const overview = await getOverview()
+    expect(readyCount(overview, [tudors.id, stuarts.id]).newToday).toBe(0)
+    expect(readyCount(overview, [uk.id]).newToday).toBe(15)
+    const next = pickNext(await loadQueueInput({ kind: 'subject', id: politics.id }, { lastCardId: null, reviewsSinceNew: 0 }))
+    expect(next.card?.set_id).toBe(uk.id)
   })
 })
