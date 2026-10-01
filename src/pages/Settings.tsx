@@ -90,23 +90,49 @@ export default function Settings() {
 
 function InstallApp() {
   const state = useInstallState()
+  const [result, setResult] = useState<string | null>(null)
+
+  async function install() {
+    try {
+      const outcome = await installApp()
+      setResult(
+        outcome === 'accepted'
+          ? 'Chrome is adding it now. Look in your app drawer (swipe up on the home screen) for Burdis Flashcards, then drag it onto your home screen.'
+          : outcome === 'dismissed'
+            ? 'The install box was closed. Reload the page to try again.'
+            : 'Chrome has stopped offering the install. Reload the page to try again.',
+      )
+    } catch (e) {
+      setResult(`Chrome said: ${(e as Error).message || String(e)}`)
+    }
+  }
+
+  const message = result && (
+    <p role="status" className="text-sm font-semibold text-ink">
+      {result}
+    </p>
+  )
   if (state === 'installed') return <p className="text-sm text-muted">The app is on your home screen.</p>
   if (state === 'ready') {
     return (
       <>
         <p className="text-sm text-muted">Put Burdis Flashcards on your home screen so it opens full screen like a normal app.</p>
-        <button type="button" className={`${btn.primary} self-start`} onClick={() => void installApp()}>
+        <button type="button" className={`${btn.primary} self-start`} onClick={() => void install()}>
           Add to home screen
         </button>
+        {message}
       </>
     )
   }
   return (
-    <p className="text-sm text-muted">
-      In Chrome, open the ⋮ menu and choose <span className="font-semibold text-ink">Add to Home screen</span> or{' '}
-      <span className="font-semibold text-ink">Install app</span>. If it's already installed, open it from your home screen
-      or app drawer.
-    </p>
+    <>
+      {message}
+      <p className="text-sm text-muted">
+        In Chrome, open the ⋮ menu and choose <span className="font-semibold text-ink">Add to Home screen</span> or{' '}
+        <span className="font-semibold text-ink">Install app</span>. If it's already installed, look for Burdis Flashcards in
+        your app drawer.
+      </p>
+    </>
   )
 }
 
