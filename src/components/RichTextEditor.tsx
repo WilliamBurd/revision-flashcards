@@ -2,8 +2,8 @@
 // italics and bullet lists. It reads and writes the stored card text format
 // (see notes/format.ts), so plain text goes in and comes out unchanged.
 //
-// The B / I / • bar sits above each box on a computer. On a phone it floats
-// just above the keyboard while you type, within thumb reach.
+// The B / I / • bar sits at the top of each box. On a phone, while the
+// keyboard is open, a copy also floats just above it, within thumb reach.
 
 import Bold from '@tiptap/extension-bold'
 import Document from '@tiptap/extension-document'
@@ -102,7 +102,7 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorProps>(fun
   if (!editor) return null
   return (
     <div className="rich-field rounded-btn border border-line bg-surface focus-within:border-accent">
-      {!touch && <FormatBar editor={editor} className="border-b border-line" />}
+      <FormatBar editor={editor} className="border-b border-line px-1" />
       <EditorContent editor={editor} />
       {touch && focused && <FloatingBar editor={editor} />}
     </div>
@@ -115,6 +115,9 @@ function useCoarsePointer(): boolean {
   const [coarse] = useState(() => typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches)
   return coarse
 }
+
+/** Shorter than this, the gap under the visible area isn't a keyboard. */
+const KEYBOARD_MIN_PX = 120
 
 /** On a phone: a bar pinned just above the on-screen keyboard. */
 function FloatingBar({ editor }: { editor: Editor }) {
@@ -135,6 +138,8 @@ function FloatingBar({ editor }: { editor: Editor }) {
   // Inside a dialog (editing mid-review), the bar must live in the dialog too,
   // or it would sit underneath it.
   const host = (editor.view.dom.closest('dialog') as HTMLElement | null) ?? document.body
+  // Only while the keyboard is actually up, so it never covers the tab bar.
+  if (bottom < KEYBOARD_MIN_PX) return null
   return createPortal(
     <div className="fixed inset-x-0 z-50 border-t border-line bg-surface shadow-[0_-4px_16px_rgb(0_0_0/0.08)]" style={{ bottom }}>
       <FormatBar editor={editor} className="mx-auto max-w-2xl px-2" />

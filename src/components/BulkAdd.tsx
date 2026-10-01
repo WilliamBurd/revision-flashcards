@@ -76,7 +76,7 @@ export default function BulkAdd({ initial, subjects, sets, tagSuggestions, onSav
           autoFocus
         />
         <p className="mt-1 text-sm text-muted">
-          Write <strong>Front - Back</strong> on each line. A line with {'{{blanks}}'} makes cloze cards.
+          Write <strong>Front - Back</strong> on each line. A line like <code>took place in {'{{1688}}'}</code> makes a blanks card.
         </p>
       </div>
 
@@ -107,7 +107,7 @@ export default function BulkAdd({ initial, subjects, sets, tagSuggestions, onSav
         <input type="checkbox" className="h-5 w-5 accent-accent" checked={reverse} onChange={(e) => setReverse(e.target.checked)} />
         <span>
           Also make reversed cards
-          <span className="block text-sm text-muted">For Front - Back lines, not cloze ones</span>
+          <span className="block text-sm text-muted">For Front - Back lines, not blanks cards</span>
         </span>
       </label>
       <SharedFields subjects={subjects} sets={sets} values={shared} suggestions={tagSuggestions} onChange={changeShared} />
@@ -140,7 +140,7 @@ export default function BulkAdd({ initial, subjects, sets, tagSuggestions, onSav
                   <div className="min-w-0 flex-1">
                     <RichText text={l.front} cloze={{ active: 0, revealed: true }} />
                     <span className="text-sm text-accent">
-                      Cloze, {l.blanks} {l.blanks === 1 ? 'card' : 'cards'}
+                      Blanks, {l.blanks} {l.blanks === 1 ? 'card' : 'cards'}
                     </span>
                   </div>
                 )}

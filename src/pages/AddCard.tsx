@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import BulkAdd from '../components/BulkAdd'
 import CardForm, { type SharedValues } from '../components/CardForm'
+import { CloseIcon } from '../components/Icons'
 import ClozeForm from '../components/ClozeForm'
 import { btn, input, panel } from '../components/ui'
 import { useLibrary, useTags } from '../db/hooks'
@@ -13,7 +14,7 @@ import type { CardSet, Subject } from '../db/types'
 type Tab = 'card' | 'cloze' | 'bulk'
 const TABS: { id: Tab; label: string }[] = [
   { id: 'card', label: 'Card' },
-  { id: 'cloze', label: 'Cloze' },
+  { id: 'cloze', label: 'Blanks' },
   { id: 'bulk', label: 'Paste many' },
 ]
 
@@ -44,7 +45,7 @@ function QuickAdd({ subjects, sets, wanted }: { subjects: Subject[]; sets: CardS
 
   return (
     <div className="py-6">
-      <h1 className="mb-4 text-2xl font-bold">Add cards</h1>
+      <AddHeader />
       <div role="tablist" aria-label="Kind of card" className="mb-6 grid grid-cols-3 gap-1 rounded-btn bg-raised p-1">
         {TABS.map((t) => (
           <button
@@ -104,6 +105,23 @@ function QuickAdd({ subjects, sets, wanted }: { subjects: Subject[]; sets: CardS
   )
 }
 
+/** The title, with a button to leave (back where you came from, or Home). */
+function AddHeader() {
+  const navigate = useNavigate()
+  return (
+    <div className="mb-4 flex items-center justify-between gap-2">
+      <h1 className="text-2xl font-bold">Add cards</h1>
+      <button
+        type="button"
+        className={`${btn.ghost} -mr-3`}
+        onClick={() => ((window.history.state?.idx ?? 0) > 0 ? navigate(-1) : navigate('/'))}
+      >
+        <CloseIcon width={20} height={20} /> Done
+      </button>
+    </div>
+  )
+}
+
 /** Cards need a set to go in, so offer to make one right here. */
 function FirstSet({ hasSubject }: { hasSubject: string | undefined }) {
   const [subjectName, setSubjectName] = useState('')
@@ -112,7 +130,7 @@ function FirstSet({ hasSubject }: { hasSubject: string | undefined }) {
 
   return (
     <div className="py-6">
-      <h1 className="mb-6 text-2xl font-bold">Add cards</h1>
+      <AddHeader />
       <form
         className={`${panel} flex flex-col gap-4 p-5`}
         onSubmit={async (e) => {

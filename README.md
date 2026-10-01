@@ -14,27 +14,29 @@ with no signal.
 
 ## Using it
 
-- **Home** lists your subjects and sets with how many cards are due. The big
+- **Home** (titled Burdis) lists your subjects and sets with how many cards are due. The big
   **Review all due** button starts a review of everything.
-- **Add** (or the round + button on a phone) adds cards. It has three tabs:
+- **Add** (or the round + button on a phone) adds cards; **Done** at the top
+  goes back. It has three tabs:
   - **Card**: Front and Back. After each card the form clears and keeps the
     same set and tags, so you can type card after card. Tick **Also make a
     reversed card** to get a second card that shows the Back and asks for the
     Front. On a computer, Tab moves from Front to Back and Ctrl+Enter
     (Cmd+Enter on a Mac) saves.
-  - **Cloze**: type a sentence, then tap the words to hide. Tapping the word
-    next to a blank makes the blank longer ("William" then "III"); tapping a
-    hidden word again un-hides it. Each blank becomes its own card, which
-    shows the sentence with that blank as [...] (or your hint). On a
-    computer you can type blanks as `{{1688}}`, or `{{1688::year}}` for a
-    hint.
+  - **Blanks** (also called cloze cards): write a fact as a sentence and tap
+    **Next**, then tap the words to hide. Hidden words next to each other
+    join into one blank ("William" and "III"), and tapping a hidden word
+    again shows it. A preview shows each card it will make, with
+    **+ Add a hint** to show something like [year] instead of [...]. On a
+    computer you can also type blanks as `{{1688}}`, or `{{1688::year}}`
+    for a hint.
   - **Paste many**: paste one card per line as `Front - Back` (a tab, or the
     long dashes Word makes, work too). A line with `{{blanks}}` makes cloze
     cards. Bullets and numbers at the start of lines are ignored. The
     preview shows every card before you add them, and any line that didn't
     split is shown in red and left out.
 - **Bold, italics and bullets**: use the B, I and • buttons (on a phone they
-  sit just above the keyboard while you type), or Ctrl+B and Ctrl+I. Plain
+  also sit just above the keyboard while you type), or Ctrl+B and Ctrl+I. Plain
   text works exactly as before.
 - **Tags** are optional labels like "key date" or "exam Q". Add them under
   the set when adding or editing a card.
