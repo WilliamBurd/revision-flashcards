@@ -34,7 +34,7 @@ function NameForm({ label, initial = '', placeholder, submitLabel, onSubmit, onC
         onClose()
       }}
     >
-      <label className="mb-1 block text-sm font-medium text-slate-600 dark:text-slate-300" htmlFor="name-field">
+      <label className="mb-1 block text-sm font-medium text-muted" htmlFor="name-field">
         {label}
       </label>
       <input

@@ -1,5 +1,7 @@
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
-import { ChartIcon, HomeIcon, PlusIcon, SearchIcon } from './Icons'
+import { useState } from 'react'
+import { NavLink, Outlet, useLocation, useOutletContext } from 'react-router-dom'
+import { ChartIcon, HomeIcon, PaletteIcon, PlusIcon, SearchIcon } from './Icons'
+import ThemePicker from './ThemePicker'
 
 const TABS = [
   { to: '/', label: 'Home', icon: HomeIcon },
@@ -8,28 +10,35 @@ const TABS = [
   { to: '/stats', label: 'Stats', icon: ChartIcon },
 ]
 
+interface LayoutContext {
+  openThemePicker: () => void
+}
+
+export function useLayout() {
+  return useOutletContext<LayoutContext>()
+}
+
 /** Bottom tab bar on phones, sidebar on desktop. */
 export default function Layout() {
   const { pathname } = useLocation()
+  const [themeOpen, setThemeOpen] = useState(false)
   const showQuickAdd = pathname !== '/add' && !pathname.endsWith('/edit')
 
   return (
     <div className="min-h-dvh lg:flex">
       <nav
         aria-label="Main"
-        className="hidden lg:sticky lg:top-0 lg:flex lg:h-dvh lg:w-56 lg:shrink-0 lg:flex-col lg:gap-1 lg:border-r lg:border-slate-200 lg:p-4 dark:lg:border-slate-800"
+        className="hidden lg:sticky lg:top-0 lg:flex lg:h-dvh lg:w-60 lg:shrink-0 lg:flex-col lg:gap-1 lg:border-r lg:border-line lg:bg-surface lg:p-4"
       >
-        <p className="mb-4 px-3 text-lg font-semibold">Revision</p>
+        <p className="font-display mb-6 px-3 text-2xl">Revision</p>
         {TABS.map(({ to, label, icon: TabIcon }) => (
           <NavLink
             key={to}
             to={to}
             end={to === '/'}
             className={({ isActive }) =>
-              `flex items-center gap-3 rounded-lg px-3 py-2 font-medium ${
-                isActive
-                  ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300'
-                  : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900'
+              `flex min-h-11 items-center gap-3 rounded-btn px-3 font-semibold ${
+                isActive ? 'bg-accent-soft text-on-accent-soft' : 'text-muted hover:bg-raised hover:text-ink'
               }`
             }
           >
@@ -37,25 +46,33 @@ export default function Layout() {
             {label}
           </NavLink>
         ))}
+        <button
+          type="button"
+          onClick={() => setThemeOpen(true)}
+          className="mt-auto flex min-h-11 items-center gap-3 rounded-btn px-3 font-semibold text-muted hover:bg-raised hover:text-ink"
+        >
+          <PaletteIcon width={20} height={20} />
+          Theme
+        </button>
       </nav>
 
-      <main className="mx-auto w-full max-w-3xl px-4 pt-safe pb-28 lg:px-8 lg:pb-12">
-        <Outlet />
+      <main className="mx-auto w-full max-w-3xl px-4 pt-safe pb-32 lg:px-8 lg:pb-12">
+        <Outlet context={{ openThemePicker: () => setThemeOpen(true) } satisfies LayoutContext} />
       </main>
 
       {showQuickAdd && (
         <NavLink
           to="/add"
           aria-label="Quick add a card"
-          className="fixed right-4 bottom-[calc(5rem+env(safe-area-inset-bottom))] flex h-14 w-14 items-center justify-center rounded-full bg-indigo-600 text-white shadow-lg hover:bg-indigo-700 lg:hidden"
+          className="fixed right-5 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-10 flex h-15 w-15 items-center justify-center rounded-btn bg-accent text-on-accent hero-shadow transition hover:bg-accent-strong active:scale-95 lg:hidden"
         >
-          <PlusIcon width={28} height={28} />
+          <PlusIcon width={28} height={28} strokeWidth={2.5} />
         </NavLink>
       )}
 
       <nav
         aria-label="Main"
-        className="pb-safe fixed inset-x-0 bottom-0 z-10 border-t border-slate-200 bg-white/95 backdrop-blur lg:hidden dark:border-slate-800 dark:bg-slate-900/95"
+        className="pb-safe fixed inset-x-0 bottom-0 z-10 border-t border-line bg-surface/95 backdrop-blur lg:hidden"
       >
         <div className="mx-auto grid max-w-md grid-cols-4">
           {TABS.map(({ to, label, icon: TabIcon }) => (
@@ -64,8 +81,8 @@ export default function Layout() {
               to={to}
               end={to === '/'}
               className={({ isActive }) =>
-                `flex min-h-16 flex-col items-center justify-center gap-1 text-xs font-medium ${
-                  isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400'
+                `flex min-h-16 flex-col items-center justify-center gap-1 text-xs font-semibold ${
+                  isActive ? 'text-accent' : 'text-muted'
                 }`
               }
             >
@@ -75,6 +92,8 @@ export default function Layout() {
           ))}
         </div>
       </nav>
+
+      <ThemePicker open={themeOpen} onClose={() => setThemeOpen(false)} />
     </div>
   )
 }

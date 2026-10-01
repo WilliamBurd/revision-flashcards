@@ -29,7 +29,7 @@ export default function Modal({ open, onClose, title, children }: Props) {
       onClick={(e) => {
         if (e.target === ref.current) onClose()
       }}
-      className="m-auto w-[calc(100%-2rem)] max-w-md rounded-2xl bg-white p-0 text-slate-900 shadow-xl backdrop:bg-black/50 dark:bg-slate-900 dark:text-slate-100"
+      className="m-auto w-[calc(100%-2rem)] max-w-md rounded-card bg-surface p-0 text-ink shadow-xl backdrop:bg-black/50"
     >
       {open && (
         <div className="p-5">

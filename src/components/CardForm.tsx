@@ -55,7 +55,7 @@ export default function CardForm({ mode, initial, subjects, sets, onSave, onCanc
     }
   }
 
-  const label = 'mb-1 block text-sm font-medium text-slate-600 dark:text-slate-300'
+  const label = 'mb-1 block text-sm font-medium text-muted'
 
   return (
     <form
@@ -118,11 +118,11 @@ export default function CardForm({ mode, initial, subjects, sets, onSave, onCanc
           </button>
         )}
         {/* Re-keyed on every add so the confirmation animates each time. */}
-        <span key={added} role="status" className="font-medium text-emerald-600 dark:text-emerald-400">
+        <span key={added} role="status" className="font-medium text-positive">
           {added > 0 ? 'Added ✓' : ''}
         </span>
       </div>
-      <p className="hidden text-sm text-slate-500 lg:block dark:text-slate-400">
+      <p className="hidden text-sm text-muted lg:block">
         Tab moves to Back. Ctrl+Enter (Cmd+Enter on Mac) saves.
       </p>
     </form>

@@ -30,6 +30,13 @@ syncing between devices come in Phase 2.
   Press E (or the pencil) to fix a typo mid-review; it doesn't reset the
   card's schedule. Escape leaves the review.
 
+- **Theme**: tap the palette button on Home (or Theme in the sidebar on a
+  computer) to pick Colourful, Midnight or Notebook. "Match device" uses
+  Colourful in light mode and Midnight in dark mode. The choice is saved on
+  each device. All colours, fonts and corner shapes come from the theme
+  variables at the top of `src/index.css`, so adding a theme means adding
+  one more block there.
+
 ### How cards are scheduled
 
 - New cards are shown again after 1 minute and 10 minutes, then move to daily

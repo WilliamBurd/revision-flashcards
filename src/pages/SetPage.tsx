@@ -2,7 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import ConfirmDialog from '../components/ConfirmDialog'
-import Counts from '../components/Counts'
+import { CountsLine, ProgressBar, ProgressKey } from '../components/Counts'
 import { BackIcon } from '../components/Icons'
 import NameDialog from '../components/NameDialog'
 import { btn, input, panel } from '../components/ui'
@@ -35,7 +35,7 @@ export default function SetPage() {
   const [dialog, setDialog] = useState<'rename' | 'delete' | null>(null)
 
   if (data === undefined || !overview) return null
-  if (data === null) return <p className="py-6 text-slate-600 dark:text-slate-300">This set has been deleted.</p>
+  if (data === null) return <p className="py-6 text-muted">This set has been deleted.</p>
 
   const { set, subject, notes, cardByNote } = data
   const counts = overview.bySet.get(set.id)
@@ -46,9 +46,13 @@ export default function SetPage() {
       <Link to="/" className={`${btn.ghost} -ml-4 mb-2`}>
         <BackIcon width={20} height={20} /> Home
       </Link>
-      <p className="text-sm text-slate-500 dark:text-slate-400">{subject?.name}</p>
+      <p className="text-sm text-muted">{subject?.name}</p>
       <h1 className="mb-1 text-2xl font-bold break-words">{set.name}</h1>
-      <Counts counts={counts} />
+      <CountsLine counts={counts} />
+      <div className="mt-3 flex flex-col gap-2">
+        <ProgressBar counts={counts} />
+        <ProgressKey />
+      </div>
 
       <div className="mt-5 grid grid-cols-2 gap-2">
         <Link
@@ -65,9 +69,9 @@ export default function SetPage() {
 
       <h2 className="mt-8 mb-2 text-lg font-semibold">Cards</h2>
       {notes.length === 0 ? (
-        <p className="text-slate-600 dark:text-slate-300">No cards yet.</p>
+        <p className="text-muted">No cards yet.</p>
       ) : (
-        <ul className={`${panel} divide-y divide-slate-200 dark:divide-slate-800`}>
+        <ul className={`${panel} divide-y divide-line`}>
           {notes.map((note) => (
             <NoteRow key={note.id} note={note} card={cardByNote.get(note.id)} />
           ))}
@@ -95,7 +99,7 @@ export default function SetPage() {
           <button type="button" className={btn.secondary} onClick={() => setDialog('rename')}>
             Rename
           </button>
-          <button type="button" className={`${btn.secondary} text-rose-600 dark:text-rose-400`} onClick={() => setDialog('delete')}>
+          <button type="button" className={`${btn.secondary} text-danger`} onClick={() => setDialog('delete')}>
             Delete set…
           </button>
         </div>
@@ -130,11 +134,11 @@ function NoteRow({ note, card }: { note: Note; card: Card | undefined }) {
     <li>
       <Link
         to={`/notes/${note.id}/edit`}
-        className="flex min-h-14 items-start gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/50"
+        className="flex min-h-14 items-start gap-3 px-4 py-3 hover:bg-raised"
       >
         <div className="min-w-0 flex-1">
           <p className="truncate font-medium">{note.front}</p>
-          <p className="truncate text-sm text-slate-500 dark:text-slate-400">{note.back}</p>
+          <p className="truncate text-sm text-muted">{note.back}</p>
         </div>
         {card && <StateBadge card={card} />}
       </Link>
@@ -145,10 +149,10 @@ function NoteRow({ note, card }: { note: Note; card: Card | undefined }) {
 function StateBadge({ card }: { card: Card }) {
   const style = 'shrink-0 rounded-full px-2 py-0.5 text-xs font-medium'
   if (card.state === CardState.New)
-    return <span className={`${style} bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300`}>New</span>
+    return <span className={`${style} bg-accent-soft text-on-accent-soft`}>New</span>
   const wait = card.due - Date.now()
   return (
-    <span className={`${style} bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300`}>
+    <span className={`${style} bg-raised text-ink`}>
       {wait <= 0 ? 'Due' : `In ${formatInterval(wait)}`}
     </span>
   )
