@@ -96,8 +96,9 @@ with no signal.
   intervals.
 - The app aims for you to remember 90% of cards when they come up, and never
   waits more than 45 days between reviews.
-- Up to 20 new cards are introduced a day across all sets, and each set has
-  its own limit too (20 by default; change it on the set's page). When you
+- Up to 20 new cards are introduced a day in each subject (change it in
+  Settings), so studying History never uses up Politics' new cards. Each set
+  has its own limit too (20 by default; change it on the set's page). When you
   hit the limit, the end of a review offers **Learn more today**, which is
   handy when you've just added a lot of cards.
 - The blanks of one cloze sentence, and a card and its reverse, never come
@@ -174,11 +175,19 @@ login. You only do this once.
    turn **off** "Confirm email", then **Save**. Supabase's free email
    service only sends to the project owner's address, so with confirmation
    on, your friends would never get their link.
-4. **Copy the keys.** Open **Project Settings > API** (or click **Connect**
+4. **Let password reset links open the app.** Open **Authentication > URL
+   Configuration**. Set **Site URL** to the live address
+   (`https://burdis-flashcards.vercel.app`) and add the same address under
+   **Redirect URLs**, then **Save**. Without this, "Forgot password?" emails
+   link to `localhost`. Supabase's free email service only sends to the
+   project owner's address, so friends' reset emails need a free SMTP
+   service such as Resend added under **Authentication > Emails > SMTP
+   Settings**.
+5. **Copy the keys.** Open **Project Settings > API** (or click **Connect**
    at the top). Copy the **Project URL** and the **anon public** key. The
    anon key is safe to put in the app: the rules from step 2 are what
    protect the data.
-5. **Give the keys to Vercel.** In your Vercel project open **Settings >
+6. **Give the keys to Vercel.** In your Vercel project open **Settings >
    Environment Variables** and add two variables, ticking Production,
    Preview and Development for each:
    - `VITE_SUPABASE_URL` = the Project URL
@@ -186,7 +195,7 @@ login. You only do this once.
 
    Then open **Deployments**, click **⋯** on the latest one and choose
    **Redeploy**. The app now shows a sign-in screen.
-6. **For local development** (optional), copy `.env.example` to
+7. **For local development** (optional), copy `.env.example` to
    `.env.local` and paste the same two values in.
 
 ### How syncing works

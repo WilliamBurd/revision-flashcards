@@ -31,8 +31,9 @@ export interface SetCounts {
 export const KNOWN_INTERVAL_DAYS = 21
 
 interface Budget {
-  newRemainingTotal: number
   newRemainingBySet: Map<string, number>
+  newRemainingBySubject: Map<string, number>
+  subjectOfSet: Map<string, string>
 }
 
 function extraToday(settings: Settings, now: number): number {
@@ -44,25 +45,34 @@ async function todaysLogs(now: number): Promise<ReviewLog[]> {
   return logs.filter((l) => !l.deleted && !l.is_cram)
 }
 
-/** How many new cards are still allowed today, overall and per set. */
+/**
+ * How many new cards are still allowed today, per set and per subject. Each
+ * subject has its own daily limit, so studying History first never uses up
+ * Politics' new cards.
+ */
 function newBudget(settings: Settings, sets: CardSet[], logs: ReviewLog[], cardSet: Map<string, string>, now: number): Budget {
   const extra = extraToday(settings, now)
+  const subjectOfSet = new Map(sets.map((s) => [s.id, s.subject_id]))
   const introducedBySet = new Map<string, number>()
-  let introduced = 0
+  const introducedBySubject = new Map<string, number>()
   for (const log of logs) {
     if (log.state_before !== CardState.New) continue
-    introduced++
     const setId = cardSet.get(log.card_id)
-    if (setId) introducedBySet.set(setId, (introducedBySet.get(setId) ?? 0) + 1)
+    if (!setId) continue
+    introducedBySet.set(setId, (introducedBySet.get(setId) ?? 0) + 1)
+    const subjectId = subjectOfSet.get(setId)
+    if (subjectId) introducedBySubject.set(subjectId, (introducedBySubject.get(subjectId) ?? 0) + 1)
   }
   const newRemainingBySet = new Map<string, number>()
+  const newRemainingBySubject = new Map<string, number>()
   for (const set of sets) {
     newRemainingBySet.set(set.id, Math.max(0, set.new_cards_per_day + extra - (introducedBySet.get(set.id) ?? 0)))
+    if (!newRemainingBySubject.has(set.subject_id)) {
+      const used = introducedBySubject.get(set.subject_id) ?? 0
+      newRemainingBySubject.set(set.subject_id, Math.max(0, settings.new_cards_per_day_total + extra - used))
+    }
   }
-  return {
-    newRemainingTotal: Math.max(0, settings.new_cards_per_day_total + extra - introduced),
-    newRemainingBySet,
-  }
+  return { newRemainingBySet, newRemainingBySubject, subjectOfSet }
 }
 
 /**
@@ -88,8 +98,9 @@ export async function liveCards(now: number): Promise<Card[]> {
 
 export interface StudyOverview {
   bySet: Map<string, SetCounts>
-  /** New cards still allowed today across all sets. */
-  newRemainingTotal: number
+  /** New cards still allowed today in each subject. */
+  newRemainingBySubject: Map<string, number>
+  subjectOfSet: Map<string, string>
 }
 
 /** Counts for every set, for the home screen and set pages. */
@@ -112,22 +123,27 @@ export async function getOverview(now = Date.now()): Promise<StudyOverview> {
     if (card.state === CardState.Review ? card.due < endOfDay : card.due <= now) counts.due++
   }
   for (const [setId, counts] of bySet) {
-    counts.newToday = Math.min(counts.new, budget.newRemainingBySet.get(setId) ?? 0, budget.newRemainingTotal)
+    const subjectLeft = budget.newRemainingBySubject.get(budget.subjectOfSet.get(setId) ?? '') ?? 0
+    counts.newToday = Math.min(counts.new, budget.newRemainingBySet.get(setId) ?? 0, subjectLeft)
   }
-  return { bySet, newRemainingTotal: budget.newRemainingTotal }
+  return { bySet, newRemainingBySubject: budget.newRemainingBySubject, subjectOfSet: budget.subjectOfSet }
 }
 
 /** Cards ready to study now in a scope: due cards plus today's new cards. */
 export function readyCount(overview: StudyOverview, setIds: string[]): { due: number; newToday: number } {
   let due = 0
-  let newToday = 0
+  const newBySubject = new Map<string, number>()
   for (const id of setIds) {
     const c = overview.bySet.get(id)
     if (!c) continue
     due += c.due
-    newToday += c.newToday
+    const subject = overview.subjectOfSet.get(id) ?? ''
+    newBySubject.set(subject, (newBySubject.get(subject) ?? 0) + c.newToday)
   }
-  return { due, newToday: Math.min(newToday, overview.newRemainingTotal) }
+  // Sets in one subject share that subject's daily limit.
+  let newToday = 0
+  for (const [subject, n] of newBySubject) newToday += Math.min(n, overview.newRemainingBySubject.get(subject) ?? 0)
+  return { due, newToday }
 }
 
 export async function setIdsInScope(scope: Scope): Promise<string[]> {

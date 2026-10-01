@@ -18,8 +18,10 @@ export interface QueueInput {
   endOfDay: number
   /** How many more new cards may be introduced today, per set. */
   newRemainingBySet: Map<string, number>
-  /** How many more new cards may be introduced today across all sets. */
-  newRemainingTotal: number
+  /** How many more new cards may be introduced today in each subject. */
+  newRemainingBySubject: Map<string, number>
+  /** Which subject each set belongs to. */
+  subjectOfSet: Map<string, string>
   /** Cards already reviewed today, so their siblings can be buried. */
   reviewedToday: { card_id: string; note_id: string }[]
   /** The card shown just before, which must not be shown again straight away. */
@@ -63,19 +65,21 @@ export function pickNext(input: QueueInput): QueueResult {
     .filter((c) => c.state === CardState.Review && c.due < endOfDay)
     .sort((a, b) => a.due - b.due) // most overdue first
 
-  // New cards, oldest first, within the per-set and overall limits.
+  // New cards, oldest first, within the per-set and per-subject limits.
   const allNew = cards
     .filter((c) => c.state === CardState.New)
     .sort((a, b) => a.created_at - b.created_at || a.id.localeCompare(b.id))
   const budget = new Map(input.newRemainingBySet)
-  let totalBudget = input.newRemainingTotal
+  const subjectBudget = new Map(input.newRemainingBySubject)
   const newAllowed: Card[] = []
   for (const c of allNew) {
     const setLeft = budget.get(c.set_id) ?? 0
-    if (totalBudget > 0 && setLeft > 0) {
+    const subject = input.subjectOfSet.get(c.set_id) ?? ''
+    const subjectLeft = subjectBudget.get(subject) ?? 0
+    if (subjectLeft > 0 && setLeft > 0) {
       newAllowed.push(c)
       budget.set(c.set_id, setLeft - 1)
-      totalBudget--
+      subjectBudget.set(subject, subjectLeft - 1)
     }
   }
   const newHeldBack = allNew.length - newAllowed.length

@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import type { CardSet, Subject } from '../db/types'
 import { bulkCardCount, parseBulk, type Separator } from '../notes/bulk'
 import { Added, SharedFields, type SharedValues } from './CardForm'
+import MarkupBar, { markupShortcuts } from './MarkupBar'
 import RichText from './RichText'
 import { btn, input, label } from './ui'
 
@@ -31,6 +32,7 @@ export default function BulkAdd({ initial, subjects, sets, tagSuggestions, onSav
   const [shared, setShared] = useState(initial)
   const [saving, setSaving] = useState(false)
   const [added, setAdded] = useState<number[]>([0, 0])
+  const box = useRef<HTMLTextAreaElement>(null)
 
   const lines = useMemo(() => parseBulk(text, sep, custom), [text, sep, custom])
   const good = lines.filter((l) => l.kind !== 'error')
@@ -67,8 +69,11 @@ export default function BulkAdd({ initial, subjects, sets, tagSuggestions, onSav
         <label htmlFor="bulk-text" className={label}>
           One card per line
         </label>
+        <MarkupBar target={box} value={text} onChange={setText} bullets={false} />
         <textarea
           id="bulk-text"
+          ref={box}
+          onKeyDown={markupShortcuts(text, setText)}
           className={`${input} min-h-48 resize-y font-mono text-base`}
           value={text}
           onChange={(e) => setText(e.target.value)}
@@ -113,13 +118,6 @@ export default function BulkAdd({ initial, subjects, sets, tagSuggestions, onSav
       </label>
       <SharedFields subjects={subjects} sets={sets} values={shared} suggestions={tagSuggestions} onChange={changeShared} hideSet={hideSet} />
 
-      <div className="flex items-center gap-3">
-        <button type="submit" className={`${btn.primary} flex-1 sm:flex-none`} disabled={!good.length || !shared.setId || saving}>
-          {cards ? `Add ${cards} ${cards === 1 ? 'card' : 'cards'}` : 'Add cards'}
-          {bad > 0 && good.length > 0 ? ` (skipping ${bad})` : ''}
-        </button>
-        <Added count={added[0]} text={`Added ${added[1]} ✓`} />
-      </div>
 
       {lines.length > 0 && (
         <section aria-label="Preview">
@@ -157,6 +155,14 @@ export default function BulkAdd({ initial, subjects, sets, tagSuggestions, onSav
         </section>
       )}
 
+      {/* Pinned to the bottom (above the tab bar on a phone), so it's always in reach. */}
+      <div className="sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] z-20 -mx-4 flex items-center gap-3 border-t border-line bg-page/95 px-4 py-3 backdrop-blur lg:bottom-0 lg:-mx-8 lg:px-8">
+        <button type="submit" className={`${btn.primary} flex-1 sm:flex-none`} disabled={!good.length || !shared.setId || saving}>
+          {cards ? `Add ${cards} ${cards === 1 ? 'card' : 'cards'}` : 'Add cards'}
+          {bad > 0 && good.length > 0 ? ` (skipping ${bad})` : ''}
+        </button>
+        <Added count={added[0]} text={`Added ${added[1]} ✓`} />
+      </div>
     </form>
   )
 }

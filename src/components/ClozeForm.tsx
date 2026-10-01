@@ -2,6 +2,7 @@ import { Fragment, useRef, useState } from 'react'
 import type { CardSet, Subject } from '../db/types'
 import { buildCloze, editSentence, parseCloze, toggleWord, words, type Blank, type ClozeDraft } from '../notes/cloze'
 import { Added, Field, SharedFields, type SharedValues } from './CardForm'
+import MarkupBar, { markupShortcuts } from './MarkupBar'
 import RichText from './RichText'
 import RichTextField from './RichTextField'
 import { btn, input } from './ui'
@@ -101,9 +102,11 @@ export default function ClozeForm({ mode, initial, subjects, sets, tagSuggestion
           <label htmlFor="cloze-sentence" className={stepTitle}>
             <span className={stepNumber}>1</span> Write the sentence
           </label>
+          <MarkupBar target={sentenceRef} value={draft.text} onChange={(t) => setDraft(editSentence(draft, t))} />
           <textarea
             id="cloze-sentence"
             ref={sentenceRef}
+            onKeyDown={markupShortcuts(draft.text, (t) => setDraft(editSentence(draft, t)))}
             className={`${input} min-h-28 resize-y`}
             value={draft.text}
             onChange={(e) => setDraft(editSentence(draft, e.target.value))}
@@ -219,7 +222,7 @@ function TapWords({ draft, onTap }: { draft: ClozeDraft; onTap: (blanks: Blank[]
     <>
       {list.map((w) => {
         // Punctuation between words is shown, but isn't tappable.
-        const between = text.slice(last, w.start).trim()
+        const between = withoutMarks(text.slice(last, w.start)).trim()
         last = w.end
         const n = blankAt(w.start)
         const isFirst = n >= 0 && blanks[n].start === w.start
@@ -246,7 +249,12 @@ function TapWords({ draft, onTap }: { draft: ClozeDraft; onTap: (blanks: Blank[]
           </Fragment>
         )
       })}
-      {text.slice(last).trim() && <span className="text-lg text-muted">{text.slice(last).trim()}</span>}
+      {withoutMarks(text.slice(last)).trim() && <span className="text-lg text-muted">{withoutMarks(text.slice(last)).trim()}</span>}
     </>
   )
+}
+
+/** The bold, italics and bullet marks, which the word buttons don't need to show. */
+function withoutMarks(s: string): string {
+  return s.replace(/\*+|(^|\n)\s*-\s/g, '$1').replace(/(^|[^\p{L}\p{N}])_|_(?=[^\p{L}\p{N}]|$)/gu, '$1')
 }
