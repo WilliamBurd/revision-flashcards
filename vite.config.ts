@@ -14,8 +14,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
-        name: 'Revision Flashcards',
-        short_name: 'Revision',
+        name: 'Burdis Flashcards',
+        short_name: 'Burdis',
         description: 'Spaced-repetition flashcards for A-Level revision',
         start_url: '/',
         scope: '/',
