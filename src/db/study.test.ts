@@ -1,0 +1,97 @@
+import { beforeEach, describe, expect, it } from 'vitest'
+import { pickNext } from '../session/buildQueue'
+import { db } from './db'
+import { addBasicNote, updateNote } from './notes'
+import { allowMoreNewCards, getOverview, loadQueueInput, recordReview } from './study'
+import { countCardsIn, createSet, createSubject, deleteSubject } from './subjects'
+
+const MIN = 60_000
+
+beforeEach(async () => {
+  await Promise.all(db.tables.map((t) => t.clear()))
+})
+
+describe('study flow (Phase 1 acceptance)', () => {
+  it('adds 20 cards, reviews them, and shows correct counts after reopening', async () => {
+    const subject = await createSubject('History')
+    const set = await createSet(subject.id, 'Tudors')
+    for (let i = 1; i <= 20; i++) await addBasicNote(set.id, `Q${i}`, `A${i}`)
+
+    let overview = await getOverview()
+    expect(overview.bySet.get(set.id)).toMatchObject({ total: 20, new: 20, due: 0, newToday: 20 })
+
+    // Review every card once, rating each "Kind Of".
+    let lastCardId: string | null = null
+    for (let i = 0; i < 20; i++) {
+      const next = pickNext(await loadQueueInput({ kind: 'set', id: set.id }, { lastCardId, reviewsSinceNew: 0 }))
+      expect(next.card).not.toBeNull()
+      await recordReview(next.card!.id, 3, 4000)
+      lastCardId = next.card!.id
+    }
+
+    // "Reopen": close the database and open it again from storage.
+    db.close()
+    await db.open()
+
+    overview = await getOverview()
+    // All 20 are now in learning, due again in 10 minutes, so none are due right now.
+    expect(overview.bySet.get(set.id)).toMatchObject({ total: 20, new: 0, due: 0, newToday: 0 })
+    // Ten minutes later they are all due.
+    overview = await getOverview(Date.now() + 11 * MIN)
+    expect(overview.bySet.get(set.id)?.due).toBe(20)
+    expect(await db.review_logs.count()).toBe(20)
+  })
+
+  it('caps new cards at 20 a day, and "learn more" raises the cap', async () => {
+    const subject = await createSubject('Politics')
+    const set = await createSet(subject.id, 'UK Constitution')
+    for (let i = 0; i < 30; i++) await addBasicNote(set.id, `Q${i}`, `A${i}`)
+    const cards = await db.cards.toArray()
+    for (const c of cards.slice(0, 20)) await recordReview(c.id, 3, 1000)
+
+    let overview = await getOverview()
+    expect(overview.bySet.get(set.id)).toMatchObject({ new: 10, newToday: 0 })
+
+    await allowMoreNewCards(10)
+    overview = await getOverview()
+    expect(overview.bySet.get(set.id)?.newToday).toBe(10)
+  })
+
+  it('flags a card as a leech after 6 "No Idea" ratings', async () => {
+    const subject = await createSubject('History')
+    const set = await createSet(subject.id, 'Tudors')
+    await addBasicNote(set.id, 'Q', 'A')
+    const [card] = await db.cards.toArray()
+    let t = Date.now()
+    for (let i = 0; i < 5; i++) {
+      const c = await recordReview(card.id, 1, 1000, t)
+      expect(c.is_leech).toBe(false)
+      t += 2 * MIN
+    }
+    expect((await recordReview(card.id, 1, 1000, t)).is_leech).toBe(true)
+  })
+
+  it('editing a note keeps the card schedule', async () => {
+    const subject = await createSubject('History')
+    const set = await createSet(subject.id, 'Tudors')
+    const note = await addBasicNote(set.id, 'Battle of Bosworth?', '1458')
+    const [card] = await db.cards.toArray()
+    const rated = await recordReview(card.id, 4, 1000)
+    await updateNote(note.id, { back: '1485' })
+    const after = await db.cards.get(card.id)
+    expect(after?.due).toBe(rated.due)
+    expect(after?.reps).toBe(1)
+    expect((await db.notes.get(note.id))?.back).toBe('1485')
+  })
+
+  it('deleting a subject removes its sets and cards', async () => {
+    const subject = await createSubject('History')
+    const set = await createSet(subject.id, 'Tudors')
+    await addBasicNote(set.id, 'Q', 'A')
+    await addBasicNote(set.id, 'Q2', 'A2')
+    expect(await countCardsIn({ subjectId: subject.id })).toBe(2)
+    await deleteSubject(subject.id)
+    expect((await getOverview()).bySet.size).toBe(0)
+    expect((await db.cards.toArray()).every((c) => c.deleted)).toBe(true)
+  })
+})
