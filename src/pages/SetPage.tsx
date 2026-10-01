@@ -1,0 +1,155 @@
+import { useLiveQuery } from 'dexie-react-hooks'
+import { useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import ConfirmDialog from '../components/ConfirmDialog'
+import Counts from '../components/Counts'
+import { BackIcon } from '../components/Icons'
+import NameDialog from '../components/NameDialog'
+import { btn, input, panel } from '../components/ui'
+import { db } from '../db/db'
+import { useOverview } from '../db/hooks'
+import { deleteSet, updateSet } from '../db/subjects'
+import { CardState, type Card, type Note } from '../db/types'
+import { formatInterval } from '../scheduler/formatInterval'
+
+export default function SetPage() {
+  const { id = '' } = useParams()
+  const navigate = useNavigate()
+  const overview = useOverview()
+  const data = useLiveQuery(async () => {
+    const set = await db.sets.get(id)
+    if (!set || set.deleted) return null
+    const [subject, notes, cards] = await Promise.all([
+      db.subjects.get(set.subject_id),
+      db.notes.where('set_id').equals(id).toArray(),
+      db.cards.where('set_id').equals(id).toArray(),
+    ])
+    const cardByNote = new Map(cards.filter((c) => !c.deleted).map((c) => [c.note_id, c]))
+    return {
+      set,
+      subject,
+      notes: notes.filter((n) => !n.deleted).sort((a, b) => b.created_at - a.created_at),
+      cardByNote,
+    }
+  }, [id])
+  const [dialog, setDialog] = useState<'rename' | 'delete' | null>(null)
+
+  if (data === undefined || !overview) return null
+  if (data === null) return <p className="py-6 text-slate-600 dark:text-slate-300">This set has been deleted.</p>
+
+  const { set, subject, notes, cardByNote } = data
+  const counts = overview.bySet.get(set.id)
+  const ready = (counts?.due ?? 0) + (counts?.newToday ?? 0)
+
+  return (
+    <div className="py-6">
+      <Link to="/" className={`${btn.ghost} -ml-4 mb-2`}>
+        <BackIcon width={20} height={20} /> Home
+      </Link>
+      <p className="text-sm text-slate-500 dark:text-slate-400">{subject?.name}</p>
+      <h1 className="mb-1 text-2xl font-bold break-words">{set.name}</h1>
+      <Counts counts={counts} />
+
+      <div className="mt-5 grid grid-cols-2 gap-2">
+        <Link
+          to={`/review?set=${set.id}`}
+          className={`${btn.primary} ${ready ? '' : 'pointer-events-none opacity-60'}`}
+          aria-disabled={!ready}
+        >
+          {ready ? `Review (${ready})` : 'Nothing due'}
+        </Link>
+        <Link to={`/add?set=${set.id}`} className={btn.secondary}>
+          Add cards
+        </Link>
+      </div>
+
+      <h2 className="mt-8 mb-2 text-lg font-semibold">Cards</h2>
+      {notes.length === 0 ? (
+        <p className="text-slate-600 dark:text-slate-300">No cards yet.</p>
+      ) : (
+        <ul className={`${panel} divide-y divide-slate-200 dark:divide-slate-800`}>
+          {notes.map((note) => (
+            <NoteRow key={note.id} note={note} card={cardByNote.get(note.id)} />
+          ))}
+        </ul>
+      )}
+
+      <h2 className="mt-8 mb-2 text-lg font-semibold">Set options</h2>
+      <div className={`${panel} flex flex-col gap-4 p-4`}>
+        <label className="flex items-center justify-between gap-4">
+          <span>New cards per day</span>
+          <input
+            type="number"
+            min={0}
+            max={999}
+            inputMode="numeric"
+            className={`${input} w-24 text-center`}
+            defaultValue={set.new_cards_per_day}
+            onBlur={(e) => {
+              const n = Math.max(0, Math.min(999, Math.round(Number(e.target.value))))
+              if (Number.isFinite(n) && n !== set.new_cards_per_day) void updateSet(set.id, { new_cards_per_day: n })
+            }}
+          />
+        </label>
+        <div className="flex gap-2">
+          <button type="button" className={btn.secondary} onClick={() => setDialog('rename')}>
+            Rename
+          </button>
+          <button type="button" className={`${btn.secondary} text-rose-600 dark:text-rose-400`} onClick={() => setDialog('delete')}>
+            Delete set…
+          </button>
+        </div>
+      </div>
+
+      <NameDialog
+        open={dialog === 'rename'}
+        title="Rename set"
+        label="Set name"
+        initial={set.name}
+        submitLabel="Rename"
+        onSubmit={(name) => void updateSet(set.id, { name })}
+        onClose={() => setDialog(null)}
+      />
+      <ConfirmDialog
+        open={dialog === 'delete'}
+        title={`Delete ${set.name}?`}
+        message={`This deletes the set and its ${notes.length} ${notes.length === 1 ? 'card' : 'cards'}.`}
+        confirmLabel="Delete"
+        onConfirm={async () => {
+          await deleteSet(set.id)
+          navigate('/')
+        }}
+        onClose={() => setDialog(null)}
+      />
+    </div>
+  )
+}
+
+function NoteRow({ note, card }: { note: Note; card: Card | undefined }) {
+  return (
+    <li>
+      <Link
+        to={`/notes/${note.id}/edit`}
+        className="flex min-h-14 items-start gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/50"
+      >
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-medium">{note.front}</p>
+          <p className="truncate text-sm text-slate-500 dark:text-slate-400">{note.back}</p>
+        </div>
+        {card && <StateBadge card={card} />}
+      </Link>
+    </li>
+  )
+}
+
+function StateBadge({ card }: { card: Card }) {
+  const style = 'shrink-0 rounded-full px-2 py-0.5 text-xs font-medium'
+  if (card.state === CardState.New)
+    return <span className={`${style} bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300`}>New</span>
+  const wait = card.due - Date.now()
+  return (
+    <span className={`${style} bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300`}>
+      {wait <= 0 ? 'Due' : `In ${formatInterval(wait)}`}
+    </span>
+  )
+}
