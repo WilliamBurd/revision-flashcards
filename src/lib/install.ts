@@ -47,13 +47,17 @@ export function useInstallState(): InstallState {
   )
 }
 
-/** Open Chrome's install box. */
-export async function installApp(): Promise<void> {
+/** Open Chrome's install box and say what happened. */
+export async function installApp(): Promise<'accepted' | 'dismissed' | 'gone'> {
   const event = pending
-  if (!event) return
-  await event.prompt()
-  await event.userChoice
+  if (!event) return 'gone'
   // Chrome only lets each event be used once.
   pending = null
-  notify()
+  try {
+    await event.prompt()
+    const { outcome } = await event.userChoice
+    return outcome
+  } finally {
+    notify()
+  }
 }
