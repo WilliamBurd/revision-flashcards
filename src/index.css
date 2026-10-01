@@ -4,7 +4,8 @@
  * Themes. Every colour, font and corner in the app comes from these
  * variables, so a theme is just a different set of values. The picker sets
  * data-theme on <html>; "auto" uses Colourful in light mode and Midnight in
- * dark mode, following the device.
+ * dark mode, following the device. Ocean, Arcade and Clean are newer looks
+ * to try out.
  */
 
 @theme inline {
@@ -190,6 +191,162 @@
   --btn-radius: 0.75rem;
   --card-shadow: 0 1px 0 #e3dacb;
   --card-border: #e3dacb;
+  --hero-shadow: none;
+}
+
+[data-theme='ocean'] {
+  color-scheme: light;
+  --body-font: 'Nunito', system-ui, sans-serif;
+  --display-font: 'Nunito', system-ui, sans-serif;
+  --display-weight: 800;
+  --page: #e6f3f5;
+  --surface: #ffffff;
+  --raised: #f0f8f9;
+  --ink: #0f2a33;
+  --muted: #4a6570;
+  --line: #d2e5e9;
+  --accent: #0a7d8c;
+  --accent-strong: #076673;
+  --on-accent: #ffffff;
+  --accent-soft: #d8f0f3;
+  --on-accent-soft: #065b66;
+  --danger: #b4233a;
+  --positive: #1b7a4c;
+  --r1: #c2334a;
+  --r2: #a85a0a;
+  --r3: #1b7a4c;
+  --r4: #2a62c9;
+  --bar-new: #5aa9e6;
+  --bar-learning: #f2a541;
+  --bar-known: #2fa37a;
+  --subject-1: #c43c4f;
+  --subject-1-head: #fde4e7;
+  --subject-1-head-ink: #7d1f2c;
+  --subject-1-badge: #c43c4f;
+  --subject-1-badge-ink: #ffffff;
+  --subject-2: #2a62c9;
+  --subject-2-head: #e0eafc;
+  --subject-2-head-ink: #183c80;
+  --subject-2-badge: #2a62c9;
+  --subject-2-badge-ink: #ffffff;
+  --subject-3: #7b4fc9;
+  --subject-3-head: #ece4fb;
+  --subject-3-head-ink: #4a2a85;
+  --subject-3-badge: #7b4fc9;
+  --subject-3-badge-ink: #ffffff;
+  --subject-4: #2a7f47;
+  --subject-4-head: #def2e4;
+  --subject-4-head-ink: #1c5530;
+  --subject-4-badge: #2a7f47;
+  --subject-4-badge-ink: #ffffff;
+  --card-radius: 1.75rem;
+  --btn-radius: 1.25rem;
+  --card-shadow: 0 4px 14px rgb(10 90 110 / 0.08);
+  --card-border: transparent;
+  --hero-shadow: 0 12px 28px rgb(10 125 140 / 0.28);
+}
+
+[data-theme='arcade'] {
+  color-scheme: dark;
+  --body-font: 'Space Grotesk', system-ui, sans-serif;
+  --display-font: 'Space Grotesk', system-ui, sans-serif;
+  --display-weight: 700;
+  --page: #0b0b10;
+  --surface: #16161e;
+  --raised: #20202b;
+  --ink: #f4f4f8;
+  --muted: #a5a5ba;
+  --line: #2c2c3a;
+  --accent: #c6f432;
+  --accent-strong: #d8ff5c;
+  --on-accent: #0b0b10;
+  --accent-soft: #252d10;
+  --on-accent-soft: #c6f432;
+  --danger: #ff6b8b;
+  --positive: #5ef0a8;
+  --r1: #c7364a;
+  --r2: #a85f0c;
+  --r3: #1f8352;
+  --r4: #2f5fd0;
+  --bar-new: #a98bff;
+  --bar-learning: #ffd23f;
+  --bar-known: #5ef0a8;
+  --subject-1: #ff5fd2;
+  --subject-1-head: transparent;
+  --subject-1-head-ink: var(--ink);
+  --subject-1-badge: #ff5fd2;
+  --subject-1-badge-ink: #0b0b10;
+  --subject-2: #4fd8ff;
+  --subject-2-head: transparent;
+  --subject-2-head-ink: var(--ink);
+  --subject-2-badge: #4fd8ff;
+  --subject-2-badge-ink: #0b0b10;
+  --subject-3: #ffd23f;
+  --subject-3-head: transparent;
+  --subject-3-head-ink: var(--ink);
+  --subject-3-badge: #ffd23f;
+  --subject-3-badge-ink: #0b0b10;
+  --subject-4: #ff9a5c;
+  --subject-4-head: transparent;
+  --subject-4-head-ink: var(--ink);
+  --subject-4-badge: #ff9a5c;
+  --subject-4-badge-ink: #0b0b10;
+  --card-radius: 0.75rem;
+  --btn-radius: 0.625rem;
+  --card-shadow: none;
+  --card-border: #2c2c3a;
+  --hero-shadow: 0 8px 30px rgb(198 244 50 / 0.22);
+}
+
+[data-theme='clean'] {
+  color-scheme: light;
+  --body-font: 'Inter', system-ui, sans-serif;
+  --display-font: 'Inter', system-ui, sans-serif;
+  --display-weight: 700;
+  --page: #f5f5f5;
+  --surface: #ffffff;
+  --raised: #f0f0f0;
+  --ink: #111111;
+  --muted: #5a5a5a;
+  --line: #e0e0e0;
+  --accent: #111111;
+  --accent-strong: #000000;
+  --on-accent: #ffffff;
+  --accent-soft: #ebebeb;
+  --on-accent-soft: #111111;
+  --danger: #c42b2b;
+  --positive: #1f7a45;
+  --r1: #c42b2b;
+  --r2: #a35a00;
+  --r3: #1f7a45;
+  --r4: #2449b8;
+  --bar-new: #8a8a8a;
+  --bar-learning: #e0a100;
+  --bar-known: #1f7a45;
+  --subject-1: #c9401a;
+  --subject-1-head: transparent;
+  --subject-1-head-ink: var(--ink);
+  --subject-1-badge: #c9401a;
+  --subject-1-badge-ink: #ffffff;
+  --subject-2: #1f5fbf;
+  --subject-2-head: transparent;
+  --subject-2-head-ink: var(--ink);
+  --subject-2-badge: #1f5fbf;
+  --subject-2-badge-ink: #ffffff;
+  --subject-3: #8a3fb0;
+  --subject-3-head: transparent;
+  --subject-3-head-ink: var(--ink);
+  --subject-3-badge: #8a3fb0;
+  --subject-3-badge-ink: #ffffff;
+  --subject-4: #2e7d32;
+  --subject-4-head: transparent;
+  --subject-4-head-ink: var(--ink);
+  --subject-4-badge: #2e7d32;
+  --subject-4-badge-ink: #ffffff;
+  --card-radius: 0.5rem;
+  --btn-radius: 0.375rem;
+  --card-shadow: none;
+  --card-border: #e0e0e0;
   --hero-shadow: none;
 }
 

@@ -11,7 +11,7 @@
       // Set the theme before the page draws, so it never flashes the wrong colours.
       try {
         var t = localStorage.getItem('theme')
-        if (t !== 'colourful' && t !== 'midnight' && t !== 'notebook')
+        if (['colourful', 'midnight', 'notebook', 'ocean', 'arcade', 'clean'].indexOf(t) < 0)
           t = matchMedia('(prefers-color-scheme: dark)').matches ? 'midnight' : 'colourful'
         document.documentElement.dataset.theme = t
       } catch (e) {}
@@ -20,7 +20,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Source+Sans+3:wght@400;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=Nunito:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Source+Sans+3:wght@400;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
     />
   </head>
   <body>
