@@ -11,6 +11,11 @@ export interface SyncFields {
   updated_at: number
   /** Soft delete: deleted records stay so the deletion can sync to other devices. */
   deleted: boolean
+  /**
+   * 1 when this record has changes not yet sent to the cloud. Set
+   * automatically on every local write (see db.ts); never sent to the server.
+   */
+  dirty?: number
 }
 
 export interface ExamDate {
@@ -95,6 +100,7 @@ export interface Settings {
   /** Always 'settings': there is one settings row per device. */
   id: 'settings'
   updated_at: number
+  dirty?: number
   /** 0.8 to 0.95 */
   target_retention: number
   max_interval_days: number

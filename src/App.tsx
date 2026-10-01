@@ -7,8 +7,15 @@ import Home from './pages/Home'
 import Review from './pages/Review'
 import SetPage from './pages/SetPage'
 import Stats from './pages/Stats'
+import Login from './pages/Login'
+import { useAccount } from './sync/AccountProvider'
 
 export default function App() {
+  const { configured, loading, session } = useAccount()
+  if (loading) return null
+  // With a cloud account set up, everyone signs in once per device.
+  if (configured && !session) return <Login />
+
   return (
     <Routes>
       {/* Review is full screen, without the navigation. */}
