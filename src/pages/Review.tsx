@@ -102,7 +102,7 @@ export default function Review() {
                   <>
                     <span className="h-px w-full bg-line" />
                     <span className="rounded-full px-2.5 py-1 text-xs font-bold tracking-wider uppercase bg-accent-soft text-on-accent-soft">
-                      {sides.cloze ? 'Extra' : 'Answer'}
+                      {sides.cloze ? 'Note' : 'Answer'}
                     </span>
                     <RichText text={sides.answer} className="w-full text-xl leading-relaxed sm:text-2xl" />
                   </>

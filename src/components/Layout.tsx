@@ -34,7 +34,7 @@ export default function Layout() {
         aria-label="Main"
         className="hidden lg:sticky lg:top-0 lg:flex lg:h-dvh lg:w-60 lg:shrink-0 lg:flex-col lg:gap-1 lg:border-r lg:border-line lg:bg-surface lg:p-4"
       >
-        <p className="font-display mb-6 px-3 text-2xl">Revision</p>
+        <p className="font-display mb-6 px-3 text-2xl">Burdis</p>
         {TABS.map(({ to, label, icon: TabIcon }) => (
           <NavLink
             key={to}

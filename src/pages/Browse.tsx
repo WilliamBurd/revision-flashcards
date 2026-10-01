@@ -306,7 +306,7 @@ function Row(props: {
         {(props.showSet || note.type === 'cloze' || note.make_reverse || (selecting && note.tags?.length > 0)) && (
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs text-muted">
             {props.showSet && <span className="font-semibold">{props.setName}</span>}
-            {note.type === 'cloze' && <span>Cloze</span>}
+            {note.type === 'cloze' && <span>Blanks</span>}
             {note.make_reverse && <span>+ reversed</span>}
             {selecting && (note.tags ?? []).map((t) => <TagChip key={t} tag={t} active={props.activeTag} />)}
           </div>

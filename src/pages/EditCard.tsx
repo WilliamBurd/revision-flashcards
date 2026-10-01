@@ -20,7 +20,7 @@ export default function EditCard() {
 
   return (
     <div className="py-6">
-      <h1 className="mb-6 text-2xl font-bold">{note.type === 'cloze' ? 'Edit cloze card' : 'Edit card'}</h1>
+      <h1 className="mb-6 text-2xl font-bold">{note.type === 'cloze' ? 'Edit blanks card' : 'Edit card'}</h1>
       <NoteEditor key={note.id} note={note} onCancel={() => navigate(-1)} onSaved={() => navigate(-1)} />
       <button type="button" className={`${btn.ghost} mt-8 text-danger`} onClick={() => setConfirming(true)}>
         Delete card
