@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { CountsLine, ProgressBar, ProgressKey } from '../components/Counts'
@@ -10,6 +10,8 @@ import { btn, input, panel } from '../components/ui'
 import { db } from '../db/db'
 import { useOverview } from '../db/hooks'
 import { deleteSet, updateSet } from '../db/subjects'
+import { download, exportBackup, safeFileName } from '../backup/backup'
+import { exportSetCsv, importCsv } from '../backup/cards-csv'
 import type { Card, Note } from '../db/types'
 
 export default function SetPage() {
@@ -66,7 +68,15 @@ export default function SetPage() {
         <Link to={`/add?set=${set.id}`} className={btn.secondary}>
           Add cards
         </Link>
+        {(counts?.total ?? 0) > 0 && (
+          <Link to={`/review?set=${set.id}&cram=1`} className={`${btn.secondary} col-span-2`}>
+            Cram all {counts?.total} cards
+          </Link>
+        )}
       </div>
+      {(counts?.total ?? 0) > 0 && (
+        <p className="mt-1.5 text-center text-xs text-muted">Cram goes through every card in a random order without changing when they're due.</p>
+      )}
 
       <div className="mt-8 mb-2 flex items-center justify-between">
         <h2 className="text-lg font-semibold">Cards</h2>
@@ -95,7 +105,7 @@ export default function SetPage() {
             min={0}
             max={999}
             inputMode="numeric"
-            className={`${input} w-24 text-center`}
+            className={`${input.replace('w-full ', '')} w-24 shrink-0 text-center`}
             defaultValue={set.new_cards_per_day}
             onBlur={(e) => {
               const n = Math.max(0, Math.min(999, Math.round(Number(e.target.value))))
@@ -103,6 +113,30 @@ export default function SetPage() {
             }}
           />
         </label>
+        <div className="flex flex-col gap-1">
+          <label className="flex items-center justify-between gap-4">
+            <span>Exam date for this set</span>
+            <input
+              type="date"
+              className={`${input.replace('w-full ', '')} w-44 shrink-0 py-2 text-base`}
+              value={set.exam_date_override ?? ''}
+              onChange={(e) => void updateSet(set.id, { exam_date_override: e.target.value || null })}
+            />
+          </label>
+          <p className="text-sm text-muted">
+            {set.exam_date_override ? (
+              <>
+                Used instead of {subject?.name ?? 'the subject'}'s exam dates.{' '}
+                <button type="button" className="font-semibold text-accent" onClick={() => void updateSet(set.id, { exam_date_override: null })}>
+                  Clear
+                </button>
+              </>
+            ) : (
+              `Leave empty to use ${subject?.name ?? 'the subject'}'s exam dates (set them from the subject's menu on Home).`
+            )}
+          </p>
+        </div>
+        <CsvTools setId={set.id} fileName={safeFileName(`${subject?.name ?? 'Cards'} - ${set.name}`)} />
         <div className="flex gap-2">
           <button type="button" className={btn.secondary} onClick={() => setDialog('rename')}>
             Rename
@@ -145,5 +179,69 @@ function NoteRow({ note, cards }: { note: Note; cards: Card[] }) {
         <CardsBadge cards={cards} />
       </Link>
     </li>
+  )
+}
+
+function CsvTools({ setId, fileName }: { setId: string; fileName: string }) {
+  const file = useRef<HTMLInputElement>(null)
+  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
+
+  async function importFile(f: File) {
+    try {
+      const { notes, skipped } = await importCsv(await f.text(), setId)
+      const added = `Added ${notes.length} ${notes.length === 1 ? 'card' : 'cards'}`
+      setMessage({
+        ok: notes.length > 0,
+        text: skipped ? `${added}. Skipped ${skipped} ${skipped === 1 ? 'row' : 'rows'} without both a front and a back.` : `${added}.`,
+      })
+    } catch {
+      setMessage({ ok: false, text: "That file couldn't be read. Choose a .csv file." })
+    } finally {
+      if (file.current) file.current.value = ''
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <span>Export and import</span>
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          className={btn.secondary}
+          onClick={async () => download(`${fileName}.csv`, await exportSetCsv(setId), 'text/csv')}
+        >
+          Export CSV
+        </button>
+        <button type="button" className={btn.secondary} onClick={() => file.current?.click()}>
+          Import CSV
+        </button>
+        <button
+          type="button"
+          className={btn.secondary}
+          onClick={async () => download(`${fileName}.json`, JSON.stringify(await exportBackup({ setId })), 'application/json')}
+        >
+          Back up with progress
+        </button>
+        <input
+          ref={file}
+          type="file"
+          accept=".csv,.tsv,.txt,text/csv,text/plain"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0]
+            if (f) void importFile(f)
+          }}
+        />
+      </div>
+      <p className="text-sm text-muted">
+        CSV has columns front, back and tags, for spreadsheets or other apps. Fronts with {'{{blanks}}'} become blanks
+        cards. A backup also keeps your progress; import it from Settings.
+      </p>
+      {message && (
+        <p role="status" className={`text-sm ${message.ok ? 'text-positive' : 'text-danger'}`}>
+          {message.text}
+        </p>
+      )}
+    </div>
   )
 }

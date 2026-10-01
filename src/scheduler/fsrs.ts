@@ -13,6 +13,7 @@ import {
   type Steps,
 } from 'ts-fsrs'
 import type { Card, CardState, Rating } from '../db/types'
+import { latestBeforeExam } from './exams'
 import { formatInterval } from './formatInterval'
 
 export interface SchedulerSettings {
@@ -108,9 +109,17 @@ const DAY_MS = 24 * 60 * 60 * 1000
  * ts-fsrs can go a day or two past the maximum interval (it keeps "Confident"
  * longer than "Kind Of" even at the cap), so enforce the cap here.
  */
-function capInterval(c: FsrsCard, now: number, maxDays: number): FsrsCard {
-  if (c.scheduled_days <= maxDays) return c
-  return { ...c, scheduled_days: maxDays, due: new Date(now + maxDays * DAY_MS) }
+function capInterval(c: FsrsCard, now: number, maxDays: number, exam: number | null): FsrsCard {
+  let out = c
+  if (out.scheduled_days > maxDays) out = { ...out, scheduled_days: maxDays, due: new Date(now + maxDays * DAY_MS) }
+  // Never after the next exam (see exams.ts).
+  if (exam !== null) {
+    const latest = latestBeforeExam(exam, now)
+    if (out.due.getTime() > latest) {
+      out = { ...out, due: new Date(latest), scheduled_days: Math.max(0, Math.floor((latest - now) / DAY_MS)) }
+    }
+  }
+  return out
 }
 
 /** When each button would bring the card back, for the labels under the buttons. */
@@ -118,11 +127,13 @@ export function previewIntervals(
   card: ScheduleFields,
   now: number,
   scheduler: FSRS = makeScheduler(),
+  /** Start of the next exam for this card, if any. */
+  exam: number | null = null,
 ): Record<Rating, { due: number; label: string }> {
   const preview = scheduler.repeat(toFsrsCard(card), new Date(now))
   const out = {} as Record<Rating, { due: number; label: string }>
   for (const { rating } of RATINGS) {
-    const capped = capInterval(preview[rating as Grade].card, now, scheduler.parameters.maximum_interval)
+    const capped = capInterval(preview[rating as Grade].card, now, scheduler.parameters.maximum_interval, exam)
     const due = capped.due.getTime()
     out[rating] = { due, label: formatInterval(due - now) }
   }
@@ -138,7 +149,8 @@ export function rateCard(
   rating: Rating,
   now: number,
   scheduler: FSRS = makeScheduler(),
+  exam: number | null = null,
 ): ScheduleFields {
   const result = scheduler.next(toFsrsCard(card), new Date(now), rating as Grade)
-  return fromFsrsCard(capInterval(result.card, now, scheduler.parameters.maximum_interval))
+  return fromFsrsCard(capInterval(result.card, now, scheduler.parameters.maximum_interval, exam))
 }

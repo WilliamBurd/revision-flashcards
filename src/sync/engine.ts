@@ -17,6 +17,7 @@ import { DEFAULT_SETTINGS } from '../db/settings'
 import type { Card, ReviewLog, Settings } from '../db/types'
 import type { Remote, ServerRow } from './remote'
 import { replaySchedule, sameSchedule } from './replay'
+import { examDatesFor } from '../scheduler/exams'
 
 export type SyncState = 'idle' | 'syncing' | 'synced' | 'pending' | 'offline' | 'error'
 
@@ -129,13 +130,15 @@ async function pullAll(db: FlashcardDB, remote: Remote, now: number): Promise<vo
 
 async function replayCards(db: FlashcardDB, cardIds: string[], now: number): Promise<void> {
   const settings = { ...DEFAULT_SETTINGS, ...(await db.settings.get('settings')) }
-  await asSyncWrite(db, ['cards', 'review_logs'], async () => {
+  await asSyncWrite(db, ['cards', 'review_logs', 'sets', 'subjects'], async () => {
     for (const id of cardIds) {
       const card = (await db.cards.get(id)) as Card | undefined
       if (!card) continue
       const logs = await db.review_logs.where('card_id').equals(id).toArray()
       if (!logs.some((l) => !l.deleted && !l.is_cram)) continue
-      const schedule = replaySchedule(card, logs, settings)
+      const set = await db.sets.get(card.set_id)
+      const subject = set ? await db.subjects.get(set.subject_id) : undefined
+      const schedule = replaySchedule(card, logs, settings, examDatesFor(subject, set))
       if (sameSchedule(card, schedule)) continue
       // The rebuilt schedule is a new change: save it and upload it next sync.
       await db.cards.put({ ...card, ...schedule, updated_at: Math.max(now, card.updated_at + 1), dirty: 1 })

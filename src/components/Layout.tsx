@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { NavLink, Outlet, useLocation, useOutletContext } from 'react-router-dom'
-import { ChartIcon, HomeIcon, PaletteIcon, PlusIcon, SearchIcon } from './Icons'
+import { ChartIcon, HomeIcon, PaletteIcon, PlusIcon, SearchIcon, SettingsIcon } from './Icons'
 import AccountDialog from './AccountDialog'
 import SyncBadge from './SyncBadge'
 import ThemePicker from './ThemePicker'
@@ -61,6 +61,17 @@ export default function Layout() {
           <PaletteIcon width={20} height={20} />
           Theme
         </button>
+        <NavLink
+          to="/settings"
+          className={({ isActive }) =>
+            `flex min-h-11 items-center gap-3 rounded-btn px-3 font-semibold ${
+              isActive ? 'bg-accent-soft text-on-accent-soft' : 'text-muted hover:bg-raised hover:text-ink'
+            }`
+          }
+        >
+          <SettingsIcon width={20} height={20} />
+          Settings
+        </NavLink>
       </nav>
 
       <main className="mx-auto w-full max-w-3xl px-4 pt-safe pb-32 lg:px-8 lg:pb-12">
