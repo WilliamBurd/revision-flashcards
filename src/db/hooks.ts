@@ -1,4 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
+import { allTags } from './notes'
 import { getOverview } from './study'
 import { listSets, listSubjects } from './subjects'
 
@@ -13,4 +14,9 @@ export function useLibrary() {
 /** Due / new / total counts per set, kept up to date. */
 export function useOverview() {
   return useLiveQuery(() => getOverview())
+}
+
+/** Every tag in use, most used first. */
+export function useTags() {
+  return useLiveQuery(() => allTags(), []) ?? []
 }

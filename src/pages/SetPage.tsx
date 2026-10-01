@@ -5,12 +5,12 @@ import ConfirmDialog from '../components/ConfirmDialog'
 import { CountsLine, ProgressBar, ProgressKey } from '../components/Counts'
 import { BackIcon } from '../components/Icons'
 import NameDialog from '../components/NameDialog'
+import { CardsBadge, NotePreview } from '../components/NotePreview'
 import { btn, input, panel } from '../components/ui'
 import { db } from '../db/db'
 import { useOverview } from '../db/hooks'
 import { deleteSet, updateSet } from '../db/subjects'
-import { CardState, type Card, type Note } from '../db/types'
-import { formatInterval } from '../scheduler/formatInterval'
+import type { Card, Note } from '../db/types'
 
 export default function SetPage() {
   const { id = '' } = useParams()
@@ -24,12 +24,13 @@ export default function SetPage() {
       db.notes.where('set_id').equals(id).toArray(),
       db.cards.where('set_id').equals(id).toArray(),
     ])
-    const cardByNote = new Map(cards.filter((c) => !c.deleted).map((c) => [c.note_id, c]))
+    const cardsByNote = new Map<string, Card[]>()
+    for (const c of cards) if (!c.deleted) cardsByNote.set(c.note_id, [...(cardsByNote.get(c.note_id) ?? []), c])
     return {
       set,
       subject,
       notes: notes.filter((n) => !n.deleted).sort((a, b) => b.created_at - a.created_at),
-      cardByNote,
+      cardsByNote,
     }
   }, [id])
   const [dialog, setDialog] = useState<'rename' | 'delete' | null>(null)
@@ -37,7 +38,7 @@ export default function SetPage() {
   if (data === undefined || !overview) return null
   if (data === null) return <p className="py-6 text-muted">This set has been deleted.</p>
 
-  const { set, subject, notes, cardByNote } = data
+  const { set, subject, notes, cardsByNote } = data
   const counts = overview.bySet.get(set.id)
   const ready = (counts?.due ?? 0) + (counts?.newToday ?? 0)
 
@@ -67,13 +68,20 @@ export default function SetPage() {
         </Link>
       </div>
 
-      <h2 className="mt-8 mb-2 text-lg font-semibold">Cards</h2>
+      <div className="mt-8 mb-2 flex items-center justify-between">
+        <h2 className="text-lg font-semibold">Cards</h2>
+        {notes.length > 0 && (
+          <Link to={`/browse?set=${set.id}`} className={`${btn.ghost} -mr-4`}>
+            Search or select
+          </Link>
+        )}
+      </div>
       {notes.length === 0 ? (
         <p className="text-muted">No cards yet.</p>
       ) : (
         <ul className={`${panel} divide-y divide-line`}>
           {notes.map((note) => (
-            <NoteRow key={note.id} note={note} card={cardByNote.get(note.id)} />
+            <NoteRow key={note.id} note={note} cards={cardsByNote.get(note.id) ?? []} />
           ))}
         </ul>
       )}
@@ -129,31 +137,13 @@ export default function SetPage() {
   )
 }
 
-function NoteRow({ note, card }: { note: Note; card: Card | undefined }) {
+function NoteRow({ note, cards }: { note: Note; cards: Card[] }) {
   return (
     <li>
-      <Link
-        to={`/notes/${note.id}/edit`}
-        className="flex min-h-14 items-start gap-3 px-4 py-3 hover:bg-raised"
-      >
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-medium">{note.front}</p>
-          <p className="truncate text-sm text-muted">{note.back}</p>
-        </div>
-        {card && <StateBadge card={card} />}
+      <Link to={`/notes/${note.id}/edit`} className="flex min-h-14 items-start gap-3 px-4 py-3 hover:bg-raised">
+        <NotePreview note={note} />
+        <CardsBadge cards={cards} />
       </Link>
     </li>
-  )
-}
-
-function StateBadge({ card }: { card: Card }) {
-  const style = 'shrink-0 rounded-full px-2 py-0.5 text-xs font-medium'
-  if (card.state === CardState.New)
-    return <span className={`${style} bg-accent-soft text-on-accent-soft`}>New</span>
-  const wait = card.due - Date.now()
-  return (
-    <span className={`${style} bg-raised text-ink`}>
-      {wait <= 0 ? 'Due' : `In ${formatInterval(wait)}`}
-    </span>
   )
 }
