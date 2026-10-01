@@ -15,7 +15,7 @@ export default defineConfig({
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
         name: 'Burdis Flashcards',
-        short_name: 'Burdis',
+        short_name: 'Burdis Flashcards',
         description: 'Spaced-repetition flashcards for A-Level revision',
         start_url: '/',
         scope: '/',

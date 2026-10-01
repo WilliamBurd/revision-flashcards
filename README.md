@@ -14,7 +14,7 @@ with no signal.
 
 ## Using it
 
-- **Home** (titled Burdis) lists your subjects and sets with how many cards are due. The big
+- **Home** (titled Burdis Flashcards) lists your subjects and sets with how many cards are due. The big
   **Review all due** button starts a review of everything.
 - **Add** (or the round + button on a phone) adds cards; **Done** at the top
   goes back. It has three tabs:
