@@ -222,10 +222,31 @@ The app checks for a new version when you open it or switch back to it, and
 every hour while it's open, then reloads itself. Your cards and progress are
 never touched by an update.
 
+## Question suggestions (Gemini, free)
+
+On the Card tab, type the answer on the Back and tap **✨ Suggest a question**.
+The app asks Google's Gemini for three short questions that each ask for just
+that one answer, and tapping one puts it on the Front. It never changes how
+cards are scheduled.
+
+To switch it on (free, no card needed):
+
+1. Go to https://aistudio.google.com/apikey, sign in with a Google account and
+   click **Create API key**. Copy the key.
+2. In Vercel, open the project → **Settings → Environment Variables**, add
+   `GEMINI_API_KEY` with that key, and save.
+3. Redeploy (**Deployments → ⋯ → Redeploy** on the latest one).
+
+The key stays on Vercel's server (`api/suggest-question.ts`) and is never sent
+to the browser. Only signed-in users can ask for suggestions, and only the
+answer text, subject and set name go to Google. Optional: set `GEMINI_MODEL`
+to use a different Gemini model (the default is `gemini-flash-latest`).
+
 ## Installing on your phone
 
 Open the site in Chrome on Android, tap **⋮** then **Install app** (or **Add
-to Home screen**). It then opens full screen from its own icon, and works
+to Home screen**). If Chrome doesn't offer it, Firefox does: **⋮ → Add app to
+Home screen**. It then opens full screen from its own icon, and works
 with no signal once it has been opened online at least once.
 
 ## Where your data lives
