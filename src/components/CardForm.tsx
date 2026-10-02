@@ -1,4 +1,5 @@
 import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
+import { suggestQuestions } from '../lib/suggest'
 import type { CardSet, Subject } from '../db/types'
 import RichTextField, { type RichTextFieldHandle } from './RichTextField'
 import SetSelect from './SetSelect'
@@ -106,6 +107,17 @@ export default function CardForm({ mode, initial, subjects, sets, tagSuggestions
           placeholder="e.g. 1485"
         />
       </Field>
+      <SuggestQuestion
+        answer={values.back}
+        context={() => {
+          const set = sets.find((x) => x.id === values.setId)
+          return { set: set?.name, subject: subjects.find((x) => x.id === set?.subject_id)?.name }
+        }}
+        onPick={(front) => {
+          change({ front })
+          frontRef.current?.focus()
+        }}
+      />
       <label className="flex min-h-12 cursor-pointer items-center gap-3">
         <input
           type="checkbox"
@@ -135,6 +147,71 @@ export default function CardForm({ mode, initial, subjects, sets, tagSuggestions
         Tab moves to Back. Ctrl+Enter (Cmd+Enter on Mac) saves. Ctrl+B bold, Ctrl+I italics.
       </p>
     </form>
+  )
+}
+
+/**
+ * Type the answer on the Back, tap this, and pick a suggested question to put
+ * on the Front. One fact per card keeps each review easy to answer.
+ */
+function SuggestQuestion(props: {
+  answer: string
+  context: () => { subject?: string; set?: string }
+  onPick: (question: string) => void
+}) {
+  const [state, setState] = useState<{ loading: boolean; questions: string[]; error: string | null }>({
+    loading: false,
+    questions: [],
+    error: null,
+  })
+  const hasAnswer = props.answer.trim() !== ''
+
+  async function suggest() {
+    setState({ loading: true, questions: [], error: null })
+    const result = await suggestQuestions(props.answer, props.context())
+    setState('questions' in result ? { loading: false, questions: result.questions, error: null } : { loading: false, questions: [], error: result.error })
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <button
+        type="button"
+        className={`${btn.secondary} self-start`}
+        disabled={!hasAnswer || state.loading}
+        onClick={() => void suggest()}
+        title={hasAnswer ? undefined : 'Type the answer on the Back first'}
+      >
+        {state.loading ? 'Thinking…' : state.questions.length ? 'Suggest again' : '✨ Suggest a question'}
+      </button>
+      {state.questions.length > 0 && (
+        <div
+          ref={(el) => el?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })}
+          className="flex flex-col gap-2"
+          role="group"
+          aria-label="Suggested questions"
+        >
+          <p className="text-sm text-muted">Tap one to put it on the Front:</p>
+          {state.questions.map((q) => (
+            <button
+              key={q}
+              type="button"
+              className="rounded-btn border border-line bg-raised px-3 py-2 text-left hover:border-accent"
+              onClick={() => {
+                props.onPick(q)
+                setState({ loading: false, questions: [], error: null })
+              }}
+            >
+              {q}
+            </button>
+          ))}
+        </div>
+      )}
+      {state.error && (
+        <p role="alert" className="text-sm font-semibold text-danger">
+          {state.error}
+        </p>
+      )}
+    </div>
   )
 }
 
