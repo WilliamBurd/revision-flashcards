@@ -1,20 +1,18 @@
 // The app's looks. The choice is remembered on this device; "auto"
 // follows the device's light or dark setting.
 
-export type ThemeChoice = 'auto' | 'colourful' | 'midnight' | 'notebook' | 'ocean' | 'arcade' | 'clean' | 'forest' | 'slate' | 'dusk'
+export type ThemeChoice = 'auto' | 'white' | 'light-grey' | 'medium-grey' | 'dark-grey' | 'black' | 'navy' | 'midnight'
 export type ThemeName = Exclude<ThemeChoice, 'auto'>
 
 export const THEMES: { id: ThemeChoice; name: string; description: string }[] = [
-  { id: 'auto', name: 'Match device', description: 'Colourful by day, Midnight when your phone is in dark mode' },
-  { id: 'colourful', name: 'Colourful', description: 'Bright, with a colour for each subject' },
+  { id: 'auto', name: 'Match device', description: 'White by day, Midnight when your phone is in dark mode' },
+  { id: 'white', name: 'White', description: 'Clean white with blue' },
+  { id: 'light-grey', name: 'Light grey', description: 'Soft pale grey with teal' },
+  { id: 'medium-grey', name: 'Medium grey', description: 'Mid grey with gold, not too dark or bright' },
+  { id: 'dark-grey', name: 'Dark grey', description: 'Charcoal with soft blue' },
+  { id: 'black', name: 'Black', description: 'True black and white, kind to OLED screens' },
+  { id: 'navy', name: 'Navy', description: 'Deep navy with sky blue' },
   { id: 'midnight', name: 'Midnight', description: 'Dark navy and amber, easy on the eyes at night' },
-  { id: 'notebook', name: 'Notebook', description: 'Warm paper and ink, like study notes' },
-  { id: 'ocean', name: 'Ocean', description: 'Calm teal and white, with soft round corners' },
-  { id: 'arcade', name: 'Arcade', description: 'Black with neon lime, pink and blue' },
-  { id: 'clean', name: 'Clean', description: 'Plain black and white, sharp and simple' },
-  { id: 'forest', name: 'Forest', description: 'Deep green with gold, cosy and calm' },
-  { id: 'slate', name: 'Slate', description: 'Soft grey-blue, not too dark and not too bright' },
-  { id: 'dusk', name: 'Dusk', description: 'Dark plum with a warm peach glow' },
 ]
 
 const KEY = 'theme'
@@ -32,7 +30,7 @@ export function getThemeChoice(): ThemeChoice {
 
 export function resolveTheme(choice: ThemeChoice): ThemeName {
   if (choice !== 'auto') return choice
-  return darkQuery().matches ? 'midnight' : 'colourful'
+  return darkQuery().matches ? 'midnight' : 'white'
 }
 
 /** Apply the theme to the page, including the phone's status bar colour. */
