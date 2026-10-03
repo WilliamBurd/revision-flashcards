@@ -4,16 +4,14 @@ import Modal from './Modal'
 
 // What each theme looks like, for the little previews in the picker.
 const SWATCHES: Record<ThemeChoice, { page: string; surface: string; accent: string; dots: string[] }> = {
-  auto: { page: 'linear-gradient(135deg, #eef0fb 50%, #0e1424 50%)', surface: '#ffffff', accent: '#5b4be0', dots: [] },
-  colourful: { page: '#eef0fb', surface: '#ffffff', accent: '#5b4be0', dots: ['#c2410c', '#0e7490'] },
+  auto: { page: 'linear-gradient(135deg, #ffffff 50%, #0e1424 50%)', surface: '#ffffff', accent: '#2f5bea', dots: [] },
+  white: { page: '#ffffff', surface: '#f4f5f7', accent: '#2f5bea', dots: ['#c2410c', '#0e7490'] },
+  'light-grey': { page: '#eceef1', surface: '#fbfbfc', accent: '#0f766e', dots: ['#c2410c', '#0e7490'] },
+  'medium-grey': { page: '#4d525a', surface: '#5c6169', accent: '#ffd166', dots: ['#ff8a65', '#6c8cff'] },
+  'dark-grey': { page: '#1e1f22', surface: '#2a2b2f', accent: '#8ab4ff', dots: ['#ff8a65', '#6c8cff'] },
+  black: { page: '#000000', surface: '#111111', accent: '#ffffff', dots: ['#ff8a65', '#6c8cff'] },
+  navy: { page: '#0b1f44', surface: '#12295a', accent: '#4fc3f7', dots: ['#ff8a65', '#6c8cff'] },
   midnight: { page: '#0e1424', surface: '#182036', accent: '#f5b544', dots: ['#ff8a65', '#6c8cff'] },
-  notebook: { page: '#f4efe6', surface: '#fffcf6', accent: '#1f3a8a', dots: ['#9b2c2c', '#1f6f78'] },
-  ocean: { page: '#e6f3f5', surface: '#ffffff', accent: '#0a7d8c', dots: ['#c43c4f', '#2a62c9'] },
-  arcade: { page: '#0b0b10', surface: '#16161e', accent: '#c6f432', dots: ['#ff5fd2', '#4fd8ff'] },
-  clean: { page: '#f5f5f5', surface: '#ffffff', accent: '#111111', dots: ['#c9401a', '#1f5fbf'] },
-  forest: { page: '#14201b', surface: '#1c2b24', accent: '#e9c46a', dots: ['#f28f6b', '#8fb8de'] },
-  slate: { page: '#2e3440', surface: '#3b4252', accent: '#88c0d0', dots: ['#e8a07c', '#81a1c1'] },
-  dusk: { page: '#231d30', surface: '#30283f', accent: '#ff9e7a', dots: ['#ff9e7a', '#8fb4ff'] },
 }
 
 export default function ThemePicker({ open, onClose }: { open: boolean; onClose: () => void }) {
