@@ -5,14 +5,14 @@ export type ThemeChoice = 'auto' | 'white' | 'light-grey' | 'medium-grey' | 'dar
 export type ThemeName = Exclude<ThemeChoice, 'auto'>
 
 export const THEMES: { id: ThemeChoice; name: string; description: string }[] = [
-  { id: 'auto', name: 'Match device', description: 'White by day, Midnight when your phone is in dark mode' },
+  { id: 'auto', name: 'Match device', description: 'White by day, Dark navy when your phone is in dark mode' },
   { id: 'white', name: 'White', description: 'Clean white with blue' },
   { id: 'light-grey', name: 'Light grey', description: 'Soft pale grey with teal' },
   { id: 'medium-grey', name: 'Medium grey', description: 'Mid grey with gold, not too dark or bright' },
   { id: 'dark-grey', name: 'Dark grey', description: 'Charcoal with soft blue' },
   { id: 'black', name: 'Black', description: 'True black and white, kind to OLED screens' },
   { id: 'navy', name: 'Navy', description: 'Deep navy with sky blue' },
-  { id: 'midnight', name: 'Midnight', description: 'Dark navy and amber, easy on the eyes at night' },
+  { id: 'midnight', name: 'Dark navy', description: 'Very dark navy with amber, easy on the eyes at night' },
 ]
 
 const KEY = 'theme'
