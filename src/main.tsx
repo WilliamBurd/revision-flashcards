@@ -5,10 +5,13 @@ import App from './App'
 import { AccountProvider } from './sync/AccountProvider'
 import './index.css'
 import { applyTheme, watchDeviceTheme } from './lib/theme'
+import { applyAccent, applyTextSize } from './lib/look'
 import { keepAppUpdated } from './lib/update'
 import { listenForInstall } from './lib/install'
 
 applyTheme()
+applyAccent()
+applyTextSize()
 watchDeviceTheme()
 keepAppUpdated()
 listenForInstall()
