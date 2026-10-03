@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { ACCENTS, getAccent, getTextSize, setAccent, setTextSize, TEXT_SIZES, type TextSize } from '../lib/look'
 import { getThemeChoice, setThemeChoice, THEMES, type ThemeChoice } from '../lib/theme'
 import Modal from './Modal'
 
@@ -18,7 +19,7 @@ export default function ThemePicker({ open, onClose }: { open: boolean; onClose:
   const [choice, setChoice] = useState(getThemeChoice)
 
   return (
-    <Modal open={open} onClose={onClose} title="Theme">
+    <Modal open={open} onClose={onClose} title="Look">
       <fieldset className="flex flex-col gap-2">
         <legend className="sr-only">Choose a theme</legend>
         {THEMES.map((theme) => {
@@ -62,6 +63,8 @@ export default function ThemePicker({ open, onClose }: { open: boolean; onClose:
           )
         })}
       </fieldset>
+      <AccentPicker />
+      <TextSizePicker />
       <div className="mt-4 flex justify-end">
         <button
           type="button"
@@ -72,5 +75,96 @@ export default function ThemePicker({ open, onClose }: { open: boolean; onClose:
         </button>
       </div>
     </Modal>
+  )
+}
+
+function AccentPicker() {
+  const [accent, setChoice] = useState(getAccent)
+  const custom = accent !== null && !ACCENTS.some((a) => a.color === accent)
+  const pick = (hex: string | null) => {
+    setChoice(hex)
+    setAccent(hex)
+  }
+  const ring = (selected: boolean) =>
+    `relative flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border-2 ${
+      selected ? 'border-ink outline-2 outline-offset-2 outline-ink' : 'border-line'
+    }`
+
+  return (
+    <fieldset className="mt-5">
+      <legend className="mb-2 font-semibold">Accent colour</legend>
+      <p className="mb-3 text-sm text-muted">Buttons, links and highlights. Works with any theme.</p>
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          aria-pressed={accent === null}
+          aria-label="Theme's own colour"
+          title="Theme's own colour"
+          className={`${ring(accent === null)} bg-surface text-xs font-semibold text-muted`}
+          onClick={() => pick(null)}
+        >
+          Auto
+        </button>
+        {ACCENTS.map((a) => (
+          <button
+            key={a.color}
+            type="button"
+            aria-pressed={accent === a.color}
+            aria-label={a.name}
+            title={a.name}
+            className={ring(accent === a.color)}
+            style={{ background: a.color }}
+            onClick={() => pick(a.color)}
+          />
+        ))}
+        <label
+          className={ring(custom)}
+          title="Any colour"
+          style={{
+            background: custom
+              ? accent
+              : 'conic-gradient(#e5484d, #f5b544, #2fb36a, #4fc3f7, #2f5bea, #8b5cf6, #ec4899, #e5484d)',
+          }}
+        >
+          <span className="sr-only">Any colour</span>
+          <input
+            type="color"
+            className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+            value={accent ?? '#2f5bea'}
+            onChange={(e) => pick(e.target.value)}
+          />
+        </label>
+      </div>
+    </fieldset>
+  )
+}
+
+function TextSizePicker() {
+  const [size, setSize] = useState<TextSize>(getTextSize)
+  return (
+    <fieldset className="mt-5">
+      <legend className="mb-2 font-semibold">Text size</legend>
+      <div className="grid grid-cols-4 gap-2">
+        {TEXT_SIZES.map((s, i) => (
+          <button
+            key={s.id}
+            type="button"
+            aria-pressed={size === s.id}
+            className={`flex min-h-12 flex-col items-center justify-center rounded-btn border-2 px-1 ${
+              size === s.id ? 'border-accent bg-accent-soft text-on-accent-soft' : 'border-line hover:bg-raised'
+            }`}
+            onClick={() => {
+              setSize(s.id)
+              setTextSize(s.id)
+            }}
+          >
+            <span aria-hidden="true" className="font-semibold leading-none" style={{ fontSize: `${0.85 + i * 0.2}rem` }}>
+              Aa
+            </span>
+            <span className="mt-1 text-xs">{s.name}</span>
+          </button>
+        ))}
+      </div>
+    </fieldset>
   )
 }

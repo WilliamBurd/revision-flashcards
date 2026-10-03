@@ -62,7 +62,7 @@ export default function Settings() {
 
       <Section title="Look">
         <button type="button" className={`${btn.secondary} self-start`} onClick={openThemePicker}>
-          Change theme
+          Theme, accent colour and text size
         </button>
       </Section>
 

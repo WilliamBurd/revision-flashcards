@@ -45,7 +45,7 @@ export default function Home() {
           <span className="min-w-0 flex-1 truncate text-sm font-semibold text-muted">{today()}</span>
           <div className="-my-2 flex items-center gap-1 lg:hidden">
             <SyncBadge onClick={openAccount} />
-            <button type="button" className={btn.icon} aria-label="Change theme" onClick={openThemePicker}>
+            <button type="button" className={btn.icon} aria-label="Theme, colour and text size" onClick={openThemePicker}>
               <PaletteIcon />
             </button>
             <Link to="/settings" className={btn.icon} aria-label="Settings">
