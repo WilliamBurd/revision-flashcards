@@ -3,7 +3,7 @@
 /*
  * Themes. Every colour, font and corner in the app comes from these
  * variables, so a theme is just a different set of values. The picker sets
- * data-theme on <html>; "auto" uses White in light mode and Midnight in dark
+ * data-theme on <html>; "auto" uses White in light mode and Dark navy (id midnight) in dark
  * mode, following the device.
  */
 

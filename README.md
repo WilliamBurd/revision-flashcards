@@ -85,7 +85,7 @@ with no signal.
 
 - **Theme**: tap the palette button on Home (or Theme in the sidebar on a
   computer) to pick White, Light grey, Medium grey, Dark grey, Black, Navy or
-  Midnight. "Match device" uses White in light mode and Midnight in dark mode.
+  Dark navy. "Match device" uses White in light mode and Dark navy in dark mode.
   The same screen sets an **accent colour** (nine presets or any colour, used
   in every theme) and the **text size** (Small to Extra large). The choice is saved on
   each device. All colours, fonts and corner shapes come from the theme
