@@ -23,7 +23,10 @@ with no signal.
   History, and each topic holds sets for its aspects (Culture, Economics,
   Politics, Welfare). Add one with **+ New topic** under a subject (or
   **Add a topic** in its ⋯ menu), then add sets inside it, or move an
-  existing set in with **Topic** on the set's page. Sets that aren't in a
+  existing set in with **Subject and topic** on the set's page (a set can
+  move to another subject too; its cards and progress go with it). To move
+  single cards, tap **Move cards** on a set's page, pick the cards, then
+  **Move**. Sets that aren't in a
   topic still work exactly as before and share one Review button named after
   the subject. Deleting a topic keeps its sets and cards.
 - **Add** (or the round + button on a phone) first asks which set the cards

@@ -110,6 +110,14 @@ export async function updateSet(
   await db.sets.update(id, { ...changes, updated_at: Date.now() })
 }
 
+/**
+ * Move a set, with all its cards and their progress, to another subject or
+ * topic. Cards belong to the set, so only the set itself changes.
+ */
+export async function moveSet(id: string, subjectId: string, topicId: string | null): Promise<void> {
+  await db.sets.update(id, { subject_id: subjectId, topic_id: topicId, updated_at: Date.now() })
+}
+
 /** How many cards would go if this subject or set were deleted. */
 export async function countCardsIn(scope: { subjectId?: string; setId?: string }): Promise<number> {
   const setIds = scope.setId
