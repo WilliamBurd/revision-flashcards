@@ -50,9 +50,9 @@ export default function Settings() {
           onChange={(n) => void updateSettings({ max_interval_days: n })}
         />
         <NumberSetting
-          label="New cards per day, per subject"
+          label="New cards per day, per topic"
           unit="cards"
-          hint="Each subject gets this many, so doing History never uses up Politics. Each set also has its own limit, on its page."
+          hint="Each topic (like 1900s Britain) gets this many, so doing one never uses up another. A subject's sets that aren't in a topic share one limit. Each set also has its own limit, on its page."
           value={settings.new_cards_per_day_total}
           min={0}
           max={999}
@@ -216,7 +216,7 @@ function Backup() {
   return (
     <>
       <p className="text-sm text-muted">
-        A backup file holds all your subjects, sets and cards with their progress. Importing one adds anything missing
+        A backup file holds all your subjects, topics, sets and cards with their progress. Importing one adds anything missing
         here and never removes cards. To move cards to or from a spreadsheet, use CSV on a set's page.
       </p>
       <div className="flex flex-wrap gap-2">

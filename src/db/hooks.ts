@@ -1,13 +1,13 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { allTags } from './notes'
 import { getOverview } from './study'
-import { listSets, listSubjects } from './subjects'
+import { listSets, listSubjects, listTopics } from './subjects'
 
-/** Subjects and sets, kept up to date as the database changes. */
+/** Subjects, topics and sets, kept up to date as the database changes. */
 export function useLibrary() {
   return useLiveQuery(async () => {
-    const [subjects, sets] = await Promise.all([listSubjects(), listSets()])
-    return { subjects, sets }
+    const [subjects, topics, sets] = await Promise.all([listSubjects(), listTopics(), listSets()])
+    return { subjects, topics, sets }
   })
 }
 

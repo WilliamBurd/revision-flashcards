@@ -41,8 +41,8 @@ function input(cards: Card[], o: Partial<QueueInput> = {}): QueueInput {
     now,
     endOfDay,
     newRemainingBySet: new Map([['set1', 20], ['set2', 20]]),
-    newRemainingBySubject: new Map([['subj1', 20]]),
-    subjectOfSet: new Map([['set1', 'subj1'], ['set2', 'subj1']]),
+    newRemainingByTopic: new Map([['subj1', 20]]),
+    topicOfSet: new Map([['set1', 'subj1'], ['set2', 'subj1']]),
     reviewedToday: [],
     lastCardId: null,
     reviewsSinceNew: 0,
@@ -102,13 +102,13 @@ describe('pickNext', () => {
 
   it('respects the overall new card limit', () => {
     const cards = Array.from({ length: 30 }, () => card())
-    const r = pickNext(input(cards, { newRemainingBySubject: new Map([['subj1', 20]]) }))
+    const r = pickNext(input(cards, { newRemainingByTopic: new Map([['subj1', 20]]) }))
     expect(r.remaining).toBe(20)
     expect(r.newHeldBack).toBe(10)
   })
 
   it('stops new cards when the daily limit is used up', () => {
-    const r = pickNext(input([card()], { newRemainingBySubject: new Map([['subj1', 0]]) }))
+    const r = pickNext(input([card()], { newRemainingByTopic: new Map([['subj1', 0]]) }))
     expect(r.card).toBeNull()
     expect(r.newHeldBack).toBe(1)
   })
