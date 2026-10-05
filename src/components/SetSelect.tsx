@@ -1,3 +1,5 @@
+import { useLibrary } from '../db/hooks'
+import { subjectOutline } from '../db/outline'
 import type { CardSet, Subject } from '../db/types'
 import { input } from './ui'
 
@@ -9,20 +11,23 @@ interface Props {
   sets: CardSet[]
 }
 
-/** A dropdown of sets, grouped by subject. */
+/** A dropdown of sets, grouped by subject, with each set's topic before its name. */
 export default function SetSelect({ id, value, onChange, subjects, sets }: Props) {
+  const topics = useLibrary()?.topics ?? []
   return (
     <select id={id} className={input} value={value} onChange={(e) => onChange(e.target.value)}>
       {subjects.map((subject) => {
-        const inSubject = sets.filter((s) => s.subject_id === subject.id)
-        if (!inSubject.length) return null
+        const groups = subjectOutline(subject, topics, sets).filter((g) => g.sets.length)
+        if (!groups.length) return null
         return (
           <optgroup key={subject.id} label={subject.name}>
-            {inSubject.map((set) => (
-              <option key={set.id} value={set.id}>
-                {set.name}
-              </option>
-            ))}
+            {groups.flatMap((g) =>
+              g.sets.map((set) => (
+                <option key={set.id} value={set.id}>
+                  {g.topic ? `${g.topic.name} · ${set.name}` : set.name}
+                </option>
+              )),
+            )}
           </optgroup>
         )
       })}

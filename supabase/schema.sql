@@ -34,6 +34,19 @@ create table if not exists public.subjects (
   server_updated_at timestamptz not null default clock_timestamp()
 );
 
+-- Big topics inside a subject, like "1900s Britain" in History (added October 2026).
+create table if not exists public.topics (
+  id uuid primary key,
+  user_id uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  subject_id uuid not null,
+  name text not null,
+  sort_order double precision not null default 0,
+  created_at bigint not null,
+  updated_at bigint not null,
+  deleted boolean not null default false,
+  server_updated_at timestamptz not null default clock_timestamp()
+);
+
 create table if not exists public.sets (
   id uuid primary key,
   user_id uuid not null default auth.uid() references auth.users (id) on delete cascade,
@@ -47,6 +60,9 @@ create table if not exists public.sets (
   deleted boolean not null default false,
   server_updated_at timestamptz not null default clock_timestamp()
 );
+
+-- The topic a set sits in (null: directly in its subject). Added October 2026.
+alter table public.sets add column if not exists topic_id uuid;
 
 create table if not exists public.notes (
   id uuid primary key,
@@ -112,7 +128,7 @@ create table if not exists public.settings (
 do $$
 declare t text;
 begin
-  foreach t in array array['subjects', 'sets', 'notes', 'cards', 'review_logs', 'settings'] loop
+  foreach t in array array['subjects', 'topics', 'sets', 'notes', 'cards', 'review_logs', 'settings'] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('grant select, insert, update, delete on public.%I to authenticated', t);
     execute format('drop policy if exists "Own rows only" on public.%I', t);

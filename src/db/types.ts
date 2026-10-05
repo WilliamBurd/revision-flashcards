@@ -30,9 +30,22 @@ export interface Subject extends SyncFields {
   exam_dates: ExamDate[]
 }
 
+/**
+ * A big topic inside a subject, like "1900s Britain" in History. Its sets are
+ * the aspects (culture, economics...). Reviews and the daily new-card limit
+ * work per topic. Sets not in any topic act as one topic of their own.
+ */
+export interface Topic extends SyncFields {
+  subject_id: string
+  name: string
+  sort_order: number
+}
+
 /** A set of cards. Called CardSet in code because `Set` is built into JavaScript. */
 export interface CardSet extends SyncFields {
   subject_id: string
+  /** The topic it sits in, or null for a set directly in the subject. Missing on sets made before topics. */
+  topic_id?: string | null
   name: string
   sort_order: number
   new_cards_per_day: number
@@ -106,7 +119,7 @@ export interface Settings {
   max_interval_days: number
   learning_steps: string[]
   relearning_steps: string[]
-  /** Cap on new cards per day in each subject (each set also has its own limit). */
+  /** Cap on new cards per day in each topic (each set also has its own limit). */
   new_cards_per_day_total: number
   /** Extra new cards allowed today, from the "Learn more new cards" button. */
   extra_new_cards: { day: string; count: number }

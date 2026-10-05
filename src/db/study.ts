@@ -8,10 +8,15 @@ import { LEECH_THRESHOLD, makeScheduler, previewIntervals, rateCard } from '../s
 import type { QueueInput } from '../session/buildQueue'
 import { db } from './db'
 import { getSettings, updateSettings } from './settings'
-import { listSets } from './subjects'
+import { listSets, listTopics, topicKey } from './subjects'
 import { CardState, type Card, type CardSet, type Rating, type ReviewLog, type Settings } from './types'
 
-export type Scope = { kind: 'all' } | { kind: 'subject'; id: string } | { kind: 'set'; id: string }
+/** A topic's id is its topicKey: a topic id, or `subject:<id>` for sets directly in a subject. */
+export type Scope =
+  | { kind: 'all' }
+  | { kind: 'subject'; id: string }
+  | { kind: 'topic'; id: string }
+  | { kind: 'set'; id: string }
 
 export interface SetCounts {
   total: number
@@ -32,8 +37,8 @@ export const KNOWN_INTERVAL_DAYS = 21
 
 interface Budget {
   newRemainingBySet: Map<string, number>
-  newRemainingBySubject: Map<string, number>
-  subjectOfSet: Map<string, string>
+  newRemainingByTopic: Map<string, number>
+  topicOfSet: Map<string, string>
 }
 
 function extraToday(settings: Settings, now: number): number {
@@ -45,34 +50,43 @@ async function todaysLogs(now: number): Promise<ReviewLog[]> {
   return logs.filter((l) => !l.deleted && !l.is_cram)
 }
 
+/** Which topic each set counts towards (see topicKey). */
+export function topicsOfSets(sets: CardSet[], liveTopicIds: ReadonlySet<string>): Map<string, string> {
+  return new Map(sets.map((s) => [s.id, topicKey(s, liveTopicIds)]))
+}
+
+async function liveTopicIds(): Promise<Set<string>> {
+  return new Set((await listTopics()).map((t) => t.id))
+}
+
 /**
- * How many new cards are still allowed today, per set and per subject. Each
- * subject has its own daily limit, so studying History first never uses up
- * Politics' new cards.
+ * How many new cards are still allowed today, per set and per topic. Each
+ * topic has its own daily limit, so studying 1900s Britain first never uses
+ * up the Tudors' new cards.
  */
-function newBudget(settings: Settings, sets: CardSet[], logs: ReviewLog[], cardSet: Map<string, string>, now: number): Budget {
+function newBudget(settings: Settings, sets: CardSet[], topicOfSet: Map<string, string>, logs: ReviewLog[], cardSet: Map<string, string>, now: number): Budget {
   const extra = extraToday(settings, now)
-  const subjectOfSet = new Map(sets.map((s) => [s.id, s.subject_id]))
   const introducedBySet = new Map<string, number>()
-  const introducedBySubject = new Map<string, number>()
+  const introducedByTopic = new Map<string, number>()
   for (const log of logs) {
     if (log.state_before !== CardState.New) continue
     const setId = cardSet.get(log.card_id)
     if (!setId) continue
     introducedBySet.set(setId, (introducedBySet.get(setId) ?? 0) + 1)
-    const subjectId = subjectOfSet.get(setId)
-    if (subjectId) introducedBySubject.set(subjectId, (introducedBySubject.get(subjectId) ?? 0) + 1)
+    const topic = topicOfSet.get(setId)
+    if (topic) introducedByTopic.set(topic, (introducedByTopic.get(topic) ?? 0) + 1)
   }
   const newRemainingBySet = new Map<string, number>()
-  const newRemainingBySubject = new Map<string, number>()
+  const newRemainingByTopic = new Map<string, number>()
   for (const set of sets) {
     newRemainingBySet.set(set.id, Math.max(0, set.new_cards_per_day + extra - (introducedBySet.get(set.id) ?? 0)))
-    if (!newRemainingBySubject.has(set.subject_id)) {
-      const used = introducedBySubject.get(set.subject_id) ?? 0
-      newRemainingBySubject.set(set.subject_id, Math.max(0, settings.new_cards_per_day_total + extra - used))
+    const topic = topicOfSet.get(set.id) ?? ''
+    if (!newRemainingByTopic.has(topic)) {
+      const used = introducedByTopic.get(topic) ?? 0
+      newRemainingByTopic.set(topic, Math.max(0, settings.new_cards_per_day_total + extra - used))
     }
   }
-  return { newRemainingBySet, newRemainingBySubject, subjectOfSet }
+  return { newRemainingBySet, newRemainingByTopic, topicOfSet }
 }
 
 /**
@@ -98,16 +112,17 @@ export async function liveCards(now: number): Promise<Card[]> {
 
 export interface StudyOverview {
   bySet: Map<string, SetCounts>
-  /** New cards still allowed today in each subject. */
-  newRemainingBySubject: Map<string, number>
-  subjectOfSet: Map<string, string>
+  /** New cards still allowed today in each topic. */
+  newRemainingByTopic: Map<string, number>
+  /** Which topic each set counts towards (see topicKey). */
+  topicOfSet: Map<string, string>
 }
 
 /** Counts for every set, for the home screen and set pages. */
 export async function getOverview(now = Date.now()): Promise<StudyOverview> {
-  const [settings, sets, cards, logs] = await Promise.all([getSettings(), listSets(), liveCards(now), todaysLogs(now)])
+  const [settings, sets, cards, logs, topicIds] = await Promise.all([getSettings(), listSets(), liveCards(now), todaysLogs(now), liveTopicIds()])
   const cardSet = new Map(cards.map((c) => [c.id, c.set_id]))
-  const budget = newBudget(settings, sets, logs, cardSet, now)
+  const budget = newBudget(settings, sets, topicsOfSets(sets, topicIds), logs, cardSet, now)
   const endOfDay = nextDayStart(now)
 
   const bySet = new Map<string, SetCounts>()
@@ -123,26 +138,26 @@ export async function getOverview(now = Date.now()): Promise<StudyOverview> {
     if (card.state === CardState.Review ? card.due < endOfDay : card.due <= now) counts.due++
   }
   for (const [setId, counts] of bySet) {
-    const subjectLeft = budget.newRemainingBySubject.get(budget.subjectOfSet.get(setId) ?? '') ?? 0
-    counts.newToday = Math.min(counts.new, budget.newRemainingBySet.get(setId) ?? 0, subjectLeft)
+    const topicLeft = budget.newRemainingByTopic.get(budget.topicOfSet.get(setId) ?? '') ?? 0
+    counts.newToday = Math.min(counts.new, budget.newRemainingBySet.get(setId) ?? 0, topicLeft)
   }
-  return { bySet, newRemainingBySubject: budget.newRemainingBySubject, subjectOfSet: budget.subjectOfSet }
+  return { bySet, newRemainingByTopic: budget.newRemainingByTopic, topicOfSet: budget.topicOfSet }
 }
 
 /** Cards ready to study now in a scope: due cards plus today's new cards. */
 export function readyCount(overview: StudyOverview, setIds: string[]): { due: number; newToday: number } {
   let due = 0
-  const newBySubject = new Map<string, number>()
+  const newByTopic = new Map<string, number>()
   for (const id of setIds) {
     const c = overview.bySet.get(id)
     if (!c) continue
     due += c.due
-    const subject = overview.subjectOfSet.get(id) ?? ''
-    newBySubject.set(subject, (newBySubject.get(subject) ?? 0) + c.newToday)
+    const topic = overview.topicOfSet.get(id) ?? ''
+    newByTopic.set(topic, (newByTopic.get(topic) ?? 0) + c.newToday)
   }
-  // Sets in one subject share that subject's daily limit.
+  // Sets in one topic share that topic's daily limit.
   let newToday = 0
-  for (const [subject, n] of newBySubject) newToday += Math.min(n, overview.newRemainingBySubject.get(subject) ?? 0)
+  for (const [topic, n] of newByTopic) newToday += Math.min(n, overview.newRemainingByTopic.get(topic) ?? 0)
   return { due, newToday }
 }
 
@@ -150,6 +165,10 @@ export async function setIdsInScope(scope: Scope): Promise<string[]> {
   const sets = await listSets()
   if (scope.kind === 'set') return sets.some((s) => s.id === scope.id) ? [scope.id] : []
   if (scope.kind === 'subject') return sets.filter((s) => s.subject_id === scope.id).map((s) => s.id)
+  if (scope.kind === 'topic') {
+    const topicIds = await liveTopicIds()
+    return sets.filter((s) => topicKey(s, topicIds) === scope.id).map((s) => s.id)
+  }
   return sets.map((s) => s.id)
 }
 
@@ -159,16 +178,17 @@ export async function loadQueueInput(
   session: Pick<QueueInput, 'lastCardId' | 'reviewsSinceNew'>,
   now = Date.now(),
 ): Promise<QueueInput> {
-  const [settings, sets, cards, logs, setIds] = await Promise.all([
+  const [settings, sets, cards, logs, setIds, topicIds] = await Promise.all([
     getSettings(),
     listSets(),
     liveCards(now),
     todaysLogs(now),
     setIdsInScope(scope),
+    liveTopicIds(),
   ])
   const inScope = new Set(setIds)
   const cardById = new Map(cards.map((c) => [c.id, c]))
-  const budget = newBudget(settings, sets, logs, new Map(cards.map((c) => [c.id, c.set_id])), now)
+  const budget = newBudget(settings, sets, topicsOfSets(sets, topicIds), logs, new Map(cards.map((c) => [c.id, c.set_id])), now)
   return {
     cards: cards.filter((c) => inScope.has(c.set_id)),
     now,

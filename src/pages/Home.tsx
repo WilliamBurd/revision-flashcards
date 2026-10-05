@@ -10,18 +10,32 @@ import Modal from '../components/Modal'
 import NameDialog from '../components/NameDialog'
 import { btn } from '../components/ui'
 import { useLibrary, useOverview } from '../db/hooks'
-import { readyCount } from '../db/study'
+import { subjectOutline } from '../db/outline'
+import { readyCount, type StudyOverview } from '../db/study'
 import { daysUntil, nextExam } from '../scheduler/exams'
-import { countCardsIn, createSet, createSubject, deleteSubject, renameSubject } from '../db/subjects'
-import type { Subject } from '../db/types'
+import {
+  countCardsIn,
+  createSet,
+  createSubject,
+  createTopic,
+  deleteSubject,
+  deleteTopic,
+  renameSubject,
+  renameTopic,
+} from '../db/subjects'
+import type { CardSet, Subject, Topic } from '../db/types'
 
 type Dialog =
   | { kind: 'new-subject' }
   | { kind: 'menu'; subject: Subject }
   | { kind: 'rename'; subject: Subject }
   | { kind: 'exams'; subject: Subject }
-  | { kind: 'new-set'; subject: Subject }
+  | { kind: 'new-set'; subject: Subject; topic: Topic | null }
   | { kind: 'delete'; subject: Subject; cardCount: number }
+  | { kind: 'new-topic'; subject: Subject }
+  | { kind: 'topic-menu'; topic: Topic }
+  | { kind: 'rename-topic'; topic: Topic }
+  | { kind: 'delete-topic'; topic: Topic }
 
 export default function Home() {
   const library = useLibrary()
@@ -31,7 +45,8 @@ export default function Home() {
   const close = () => setDialog(null)
 
   if (!library || !overview) return null
-  const { subjects, sets } = library
+  const { subjects, topics, sets } = library
+  const groupsOf = (subject: Subject) => subjectOutline(subject, topics, sets)
   const ready = readyCount(
     overview,
     sets.map((s) => s.id),
@@ -62,30 +77,35 @@ export default function Home() {
         <>
           {readyTotal > 0 ? (
             <div className="flex flex-col gap-3">
-              {subjects.map((subject, i) => {
-                const subjectReady = readyCount(
-                  overview,
-                  sets.filter((s) => s.subject_id === subject.id).map((s) => s.id),
-                )
-                const total = subjectReady.due + subjectReady.newToday
-                if (total === 0) return null
-                const colour = (i % 4) + 1
-                return (
-                  <Link
-                    key={subject.id}
-                    to={`/review?subject=${subject.id}`}
-                    className="hero-shadow flex min-h-20 items-center gap-4 rounded-card px-5 py-4 transition hover:brightness-110 active:scale-[0.99]"
-                    style={{ background: `var(--subject-${colour}-badge)`, color: `var(--subject-${colour}-badge-ink)` }}
-                  >
-                    <span className="flex min-w-0 flex-1 flex-col">
-                      <span className="truncate text-xl font-bold">Review {subject.name}</span>
-                      <span className="text-sm opacity-85">{readySummary(subjectReady.due, subjectReady.newToday)}</span>
-                    </span>
-                    <span className="font-display text-4xl">{total}</span>
-                    <ChevronIcon width={22} height={22} strokeWidth={2.5} />
-                  </Link>
-                )
-              })}
+              {subjects.flatMap((subject, i) =>
+                groupsOf(subject).map((group) => {
+                  const groupReady = readyCount(
+                    overview,
+                    group.sets.map((s) => s.id),
+                  )
+                  const total = groupReady.due + groupReady.newToday
+                  if (total === 0) return null
+                  const colour = (i % 4) + 1
+                  return (
+                    <Link
+                      key={group.key}
+                      to={`/review?topic=${encodeURIComponent(group.key)}`}
+                      className="hero-shadow flex min-h-20 items-center gap-4 rounded-card px-5 py-4 transition hover:brightness-110 active:scale-[0.99]"
+                      style={{ background: `var(--subject-${colour}-badge)`, color: `var(--subject-${colour}-badge-ink)` }}
+                    >
+                      <span className="flex min-w-0 flex-1 flex-col">
+                        <span className="truncate text-xl font-bold">Review {group.topic?.name ?? subject.name}</span>
+                        <span className="text-sm opacity-85">
+                          {group.topic && `${subject.name} · `}
+                          {readySummary(groupReady.due, groupReady.newToday)}
+                        </span>
+                      </span>
+                      <span className="font-display text-4xl">{total}</span>
+                      <ChevronIcon width={22} height={22} strokeWidth={2.5} />
+                    </Link>
+                  )
+                }),
+              )}
             </div>
           ) : (
             <div className="card flex min-h-20 flex-col justify-center px-5 py-4">
@@ -95,7 +115,6 @@ export default function Home() {
           )}
 
           {subjects.map((subject, i) => {
-            const subjectSets = sets.filter((s) => s.subject_id === subject.id)
             const colour = (i % 4) + 1
             const exam = nextExam(subject.exam_dates, Date.now())
             return (
@@ -120,43 +139,60 @@ export default function Home() {
                     <MoreIcon />
                   </button>
                 </div>
-                <ul>
-                  {subjectSets.map((set) => {
-                    const counts = overview.bySet.get(set.id)
-                    const due = (counts?.due ?? 0) + (counts?.newToday ?? 0)
-                    return (
-                      <li key={set.id} className="border-t border-line">
-                        <Link to={`/sets/${set.id}`} className="flex flex-col gap-2.5 px-4 py-3.5 hover:bg-raised">
-                          <span className="flex items-center gap-3">
-                            <span className="flex min-w-0 flex-1 flex-col">
-                              <span className="truncate font-semibold">{set.name}</span>
-                              <span className="text-sm text-muted">
-                                {counts?.new ?? 0} new · {counts?.total ?? 0} {counts?.total === 1 ? 'card' : 'cards'}
-                              </span>
-                            </span>
-                            <span
-                              className={`min-w-9 rounded-full px-2.5 py-1 text-center text-sm font-bold ${due ? '' : 'bg-line text-muted'}`}
-                              style={due ? { background: `var(--subject-${colour}-badge)`, color: `var(--subject-${colour}-badge-ink)` } : undefined}
-                              aria-label={`${due} to review`}
-                            >
-                              {due}
-                            </span>
-                          </span>
-                          <ProgressBar counts={counts} />
-                        </Link>
-                      </li>
-                    )
-                  })}
-                  <li className="border-t border-line">
-                    <button
-                      type="button"
-                      className="min-h-12 w-full px-4 text-left font-semibold text-accent hover:bg-raised"
-                      onClick={() => setDialog({ kind: 'new-set', subject })}
-                    >
-                      + New set
-                    </button>
-                  </li>
-                </ul>
+                {groupsOf(subject).map((group, _, groups) => (
+                  <div key={group.key}>
+                    {group.topic ? (
+                      <div className="flex items-center gap-2 border-t border-line bg-raised py-1 pr-2 pl-4">
+                        <h3 className="min-w-0 flex-1 truncate font-bold">{group.topic.name}</h3>
+                        <button
+                          type="button"
+                          className="inline-flex h-10 w-10 items-center justify-center rounded-btn hover:bg-black/5"
+                          aria-label={`Options for ${group.topic.name}`}
+                          onClick={() => group.topic && setDialog({ kind: 'topic-menu', topic: group.topic })}
+                        >
+                          <MoreIcon />
+                        </button>
+                      </div>
+                    ) : (
+                      groups.length > 1 &&
+                      group.sets.length > 0 && (
+                        <div className="border-t border-line bg-raised px-4 py-2 text-sm font-semibold text-muted">Other sets</div>
+                      )
+                    )}
+                    <ul>
+                      {group.sets.map((set) => (
+                        <SetRow key={set.id} set={set} overview={overview} colour={colour} />
+                      ))}
+                      {group.topic && (
+                        <li className="border-t border-line">
+                          <button
+                            type="button"
+                            className="min-h-12 w-full px-4 text-left font-semibold text-accent hover:bg-raised"
+                            onClick={() => setDialog({ kind: 'new-set', subject, topic: group.topic })}
+                          >
+                            + New set in {group.topic.name}
+                          </button>
+                        </li>
+                      )}
+                    </ul>
+                  </div>
+                ))}
+                <div className="flex border-t border-line">
+                  <button
+                    type="button"
+                    className="min-h-12 flex-1 px-4 text-left font-semibold text-accent hover:bg-raised"
+                    onClick={() => setDialog({ kind: 'new-set', subject, topic: null })}
+                  >
+                    + New set
+                  </button>
+                  <button
+                    type="button"
+                    className="min-h-12 flex-1 border-l border-line px-4 text-left font-semibold text-accent hover:bg-raised"
+                    onClick={() => setDialog({ kind: 'new-topic', subject })}
+                  >
+                    + New topic
+                  </button>
+                </div>
               </section>
             )
           })}
@@ -180,11 +216,59 @@ export default function Home() {
       />
       <NameDialog
         open={dialog?.kind === 'new-set'}
-        title={dialog?.kind === 'new-set' ? `New set in ${dialog.subject.name}` : ''}
+        title={dialog?.kind === 'new-set' ? `New set in ${dialog.topic?.name ?? dialog.subject.name}` : ''}
         label="Set name"
-        placeholder="e.g. Tudors – Henry VII"
+        placeholder={dialog?.kind === 'new-set' && dialog.topic ? 'e.g. Economics' : 'e.g. Tudors – Henry VII'}
         submitLabel="Create"
-        onSubmit={(name) => dialog?.kind === 'new-set' && void createSet(dialog.subject.id, name)}
+        onSubmit={(name) => dialog?.kind === 'new-set' && void createSet(dialog.subject.id, name, dialog.topic?.id ?? null)}
+        onClose={close}
+      />
+      <NameDialog
+        open={dialog?.kind === 'new-topic'}
+        title={dialog?.kind === 'new-topic' ? `New topic in ${dialog.subject.name}` : ''}
+        label="Topic name"
+        placeholder="e.g. 1900s Britain"
+        submitLabel="Create"
+        onSubmit={(name) => dialog?.kind === 'new-topic' && void createTopic(dialog.subject.id, name)}
+        onClose={close}
+      />
+      <NameDialog
+        open={dialog?.kind === 'rename-topic'}
+        title="Rename topic"
+        label="Topic name"
+        initial={dialog?.kind === 'rename-topic' ? dialog.topic.name : ''}
+        submitLabel="Rename"
+        onSubmit={(name) => dialog?.kind === 'rename-topic' && void renameTopic(dialog.topic.id, name)}
+        onClose={close}
+      />
+      <Modal open={dialog?.kind === 'topic-menu'} onClose={close} title={dialog?.kind === 'topic-menu' ? dialog.topic.name : ''}>
+        {dialog?.kind === 'topic-menu' && (
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              className={btn.secondary}
+              onClick={() => {
+                const subject = subjects.find((s) => s.id === dialog.topic.subject_id)
+                if (subject) setDialog({ kind: 'new-set', subject, topic: dialog.topic })
+              }}
+            >
+              Add a set
+            </button>
+            <button type="button" className={btn.secondary} onClick={() => setDialog({ kind: 'rename-topic', topic: dialog.topic })}>
+              Rename
+            </button>
+            <button type="button" className={`${btn.secondary} text-danger`} onClick={() => setDialog({ kind: 'delete-topic', topic: dialog.topic })}>
+              Delete…
+            </button>
+          </div>
+        )}
+      </Modal>
+      <ConfirmDialog
+        open={dialog?.kind === 'delete-topic'}
+        title={dialog?.kind === 'delete-topic' ? `Delete ${dialog.topic.name}?` : ''}
+        message="Its sets and cards are kept and move to Other sets in the subject."
+        confirmLabel="Delete"
+        onConfirm={() => dialog?.kind === 'delete-topic' && void deleteTopic(dialog.topic.id)}
         onClose={close}
       />
       <NameDialog
@@ -199,7 +283,10 @@ export default function Home() {
       <Modal open={dialog?.kind === 'menu'} onClose={close} title={dialog?.kind === 'menu' ? dialog.subject.name : ''}>
         {dialog?.kind === 'menu' && (
           <div className="flex flex-col gap-2">
-            <button type="button" className={btn.secondary} onClick={() => setDialog({ kind: 'new-set', subject: dialog.subject })}>
+            <button type="button" className={btn.secondary} onClick={() => setDialog({ kind: 'new-topic', subject: dialog.subject })}>
+              Add a topic
+            </button>
+            <button type="button" className={btn.secondary} onClick={() => setDialog({ kind: 'new-set', subject: dialog.subject, topic: null })}>
               Add a set
             </button>
             <button type="button" className={btn.secondary} onClick={() => setDialog({ kind: 'exams', subject: dialog.subject })}>
@@ -227,7 +314,7 @@ export default function Home() {
         title={dialog?.kind === 'delete' ? `Delete ${dialog.subject.name}?` : ''}
         message={
           dialog?.kind === 'delete'
-            ? `This deletes the subject, all its sets and ${dialog.cardCount} ${dialog.cardCount === 1 ? 'card' : 'cards'}.`
+            ? `This deletes the subject, all its topics and sets, and ${dialog.cardCount} ${dialog.cardCount === 1 ? 'card' : 'cards'}.`
             : ''
         }
         confirmLabel="Delete"
@@ -238,12 +325,40 @@ export default function Home() {
   )
 }
 
+function SetRow({ set, overview, colour }: { set: CardSet; overview: StudyOverview; colour: number }) {
+  const counts = overview.bySet.get(set.id)
+  const due = (counts?.due ?? 0) + (counts?.newToday ?? 0)
+  return (
+    <li className="border-t border-line">
+      <Link to={`/sets/${set.id}`} className="flex flex-col gap-2.5 px-4 py-3.5 hover:bg-raised">
+        <span className="flex items-center gap-3">
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="truncate font-semibold">{set.name}</span>
+            <span className="text-sm text-muted">
+              {counts?.new ?? 0} new · {counts?.total ?? 0} {counts?.total === 1 ? 'card' : 'cards'}
+            </span>
+          </span>
+          <span
+            className={`min-w-9 rounded-full px-2.5 py-1 text-center text-sm font-bold ${due ? '' : 'bg-line text-muted'}`}
+            style={due ? { background: `var(--subject-${colour}-badge)`, color: `var(--subject-${colour}-badge-ink)` } : undefined}
+            aria-label={`${due} to review`}
+          >
+            {due}
+          </span>
+        </span>
+        <ProgressBar counts={counts} />
+      </Link>
+    </li>
+  )
+}
+
 function Welcome({ onStart }: { onStart: () => void }) {
   return (
     <div className="card p-6 text-center">
       <h2 className="font-display mb-2 text-xl">Welcome</h2>
       <p className="mb-6 text-muted">
-        Start by adding a subject, like History or Politics. Then add sets of cards inside it.
+        Start by adding a subject, like History or Politics. Then add sets of cards inside it, or topics (like 1900s
+        Britain) with sets inside them.
       </p>
       <button type="button" className={btn.primary} onClick={onStart}>
         Add your first subject

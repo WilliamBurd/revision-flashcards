@@ -1,5 +1,5 @@
 import Dexie, { type EntityTable, type Transaction } from 'dexie'
-import type { Card, CardSet, Note, ReviewLog, Settings, Subject } from './types'
+import type { Card, CardSet, Note, ReviewLog, Settings, Subject, Topic } from './types'
 
 /** Small key-value store for sync bookkeeping (who owns this data, last pull times). */
 export interface Meta {
@@ -8,11 +8,12 @@ export interface Meta {
 }
 
 /** The tables that sync to the cloud, in the order they're sent. */
-export const SYNCED_TABLES = ['subjects', 'sets', 'notes', 'cards', 'review_logs', 'settings'] as const
+export const SYNCED_TABLES = ['subjects', 'topics', 'sets', 'notes', 'cards', 'review_logs', 'settings'] as const
 export type SyncedTable = (typeof SYNCED_TABLES)[number]
 
 export class FlashcardDB extends Dexie {
   subjects!: EntityTable<Subject, 'id'>
+  topics!: EntityTable<Topic, 'id'>
   sets!: EntityTable<CardSet, 'id'>
   notes!: EntityTable<Note, 'id'>
   cards!: EntityTable<Card, 'id'>
@@ -44,10 +45,15 @@ export class FlashcardDB extends Dexie {
         meta: 'key',
       })
       .upgrade(async (tx) => {
-        for (const table of SYNCED_TABLES) {
+        for (const table of ['subjects', 'sets', 'notes', 'cards', 'review_logs', 'settings']) {
           await tx.table(table).toCollection().modify({ dirty: 1 })
         }
       })
+    // Version 3: topics inside subjects. Existing sets stay directly in their
+    // subject (no topic) until they're moved, so nothing needs converting.
+    this.version(3).stores({
+      topics: 'id, subject_id, updated_at, dirty',
+    })
 
     // Every local change marks the record dirty, so the sync engine knows to
     // upload it. Writes made by the sync engine itself are tagged and skipped.

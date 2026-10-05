@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { db } from '../db/db'
 import { addBasicNote, addNote } from '../db/notes'
 import { recordReview } from '../db/study'
-import { createSet, createSubject, deleteSet } from '../db/subjects'
+import { createSet, createSubject, createTopic, deleteSet } from '../db/subjects'
 import { exportBackup, importBackup, readBackup } from './backup'
 import { exportSetCsv, importCsv } from './cards-csv'
 
@@ -16,6 +16,7 @@ const strip = <T extends { dirty?: number; updated_at: number }>(rows: T[]) =>
 async function snapshot() {
   return {
     subjects: strip(await db.subjects.toArray()),
+    topics: strip(await db.topics.toArray()),
     sets: strip(await db.sets.toArray()),
     notes: strip(await db.notes.toArray()),
     cards: strip(await db.cards.toArray()),
@@ -25,7 +26,8 @@ async function snapshot() {
 
 async function makeLibrary() {
   const subject = await createSubject('History')
-  const set = await createSet(subject.id, 'Tudors')
+  const topic = await createTopic(subject.id, 'Early modern England')
+  const set = await createSet(subject.id, 'Tudors', topic.id)
   for (let i = 0; i < 5; i++) await addBasicNote(set.id, `Q${i}`, `A${i}`)
   await addNote({ setId: set.id, type: 'cloze', front: '{{1485}} Bosworth, {{Henry VII}} wins', back: '', tags: ['battles'] })
   const cards = await db.cards.toArray()

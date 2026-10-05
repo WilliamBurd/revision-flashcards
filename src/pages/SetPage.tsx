@@ -21,8 +21,9 @@ export default function SetPage() {
   const data = useLiveQuery(async () => {
     const set = await db.sets.get(id)
     if (!set || set.deleted) return null
-    const [subject, notes, cards] = await Promise.all([
+    const [subject, topics, notes, cards] = await Promise.all([
       db.subjects.get(set.subject_id),
+      db.topics.where('subject_id').equals(set.subject_id).toArray(),
       db.notes.where('set_id').equals(id).toArray(),
       db.cards.where('set_id').equals(id).toArray(),
     ])
@@ -31,6 +32,7 @@ export default function SetPage() {
     return {
       set,
       subject,
+      topics: topics.filter((t) => !t.deleted).sort((a, b) => a.sort_order - b.sort_order || a.created_at - b.created_at),
       notes: notes.filter((n) => !n.deleted).sort((a, b) => b.created_at - a.created_at),
       cardsByNote,
     }
@@ -40,7 +42,8 @@ export default function SetPage() {
   if (data === undefined || !overview) return null
   if (data === null) return <p className="py-6 text-muted">This set has been deleted.</p>
 
-  const { set, subject, notes, cardsByNote } = data
+  const { set, subject, topics, notes, cardsByNote } = data
+  const topic = topics.find((t) => t.id === set.topic_id)
   const counts = overview.bySet.get(set.id)
   const ready = (counts?.due ?? 0) + (counts?.newToday ?? 0)
 
@@ -49,7 +52,10 @@ export default function SetPage() {
       <Link to="/" className={`${btn.ghost} -ml-4 mb-2`}>
         <BackIcon width={20} height={20} /> Home
       </Link>
-      <p className="text-sm text-muted">{subject?.name}</p>
+      <p className="text-sm text-muted">
+        {subject?.name}
+        {topic && ` · ${topic.name}`}
+      </p>
       <h1 className="mb-1 text-2xl font-bold break-words">{set.name}</h1>
       <CountsLine counts={counts} />
       <div className="mt-3 flex flex-col gap-2">
@@ -98,6 +104,28 @@ export default function SetPage() {
 
       <h2 className="mt-8 mb-2 text-lg font-semibold">Set options</h2>
       <div className={`${panel} flex flex-col gap-4 p-4`}>
+        <div className="flex flex-col gap-1">
+          <label className="flex items-center justify-between gap-4">
+            <span>Topic</span>
+            <select
+              className={`${input.replace('w-full ', '')} w-44 shrink-0 py-2 text-base`}
+              value={topic?.id ?? ''}
+              onChange={(e) => void updateSet(set.id, { topic_id: e.target.value || null })}
+            >
+              <option value="">None</option>
+              {topics.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <p className="text-sm text-muted">
+            {topics.length
+              ? 'Each topic has its own Review button and its own daily limit of new cards.'
+              : `Add topics (like 1900s Britain) from ${subject?.name ?? 'the subject'}'s menu on Home, then move sets into them here.`}
+          </p>
+        </div>
         <label className="flex items-center justify-between gap-4">
           <span>New cards per day</span>
           <input

@@ -4,6 +4,7 @@ import { ProgressBar, ProgressKey } from '../components/Counts'
 import { toPlain } from '../notes/format'
 import { cardSides } from '../notes/cards'
 import { useLibrary, useOverview } from '../db/hooks'
+import { subjectOutline } from '../db/outline'
 import { getStats, type ForecastDay } from '../db/stats'
 
 export default function Stats() {
@@ -11,7 +12,7 @@ export default function Stats() {
   const library = useLibrary()
   const overview = useOverview()
   if (!stats || !library || !overview) return null
-  const { subjects, sets } = library
+  const { subjects, topics, sets } = library
 
   return (
     <div className="flex flex-col gap-6 py-6 lg:py-10">
@@ -42,19 +43,20 @@ export default function Stats() {
         ) : (
           <div className="flex flex-col gap-3">
             {subjects.map((subject) => {
-              const subjectSets = sets.filter((s) => s.subject_id === subject.id)
+              // In topic order, so a topic's sets sit together.
+              const subjectSets = subjectOutline(subject, topics, sets).flatMap((g) => g.sets.map((set) => ({ set, topic: g.topic })))
               if (!subjectSets.length) return null
               return (
                 <div key={subject.id} className="card overflow-hidden">
                   <h3 className="font-display border-b border-line px-4 py-2 text-base">{subject.name}</h3>
                   <ul className="divide-y divide-line">
-                    {subjectSets.map((set) => {
+                    {subjectSets.map(({ set, topic }) => {
                       const c = overview.bySet.get(set.id)
                       return (
                         <li key={set.id}>
                           <Link to={`/sets/${set.id}`} className="flex flex-col gap-2 px-4 py-3 hover:bg-raised">
                             <span className="flex flex-wrap items-baseline justify-between gap-x-3">
-                              <span className="font-semibold">{set.name}</span>
+                              <span className="font-semibold">{topic ? `${topic.name} · ${set.name}` : set.name}</span>
                               <span className="text-sm text-muted">
                                 {c?.known ?? 0} known · {c?.learning ?? 0} learning · {c?.new ?? 0} new
                               </span>

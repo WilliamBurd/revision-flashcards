@@ -3,7 +3,7 @@ import { pickNext } from '../session/buildQueue'
 import { db } from './db'
 import { addBasicNote, updateNote } from './notes'
 import { allowMoreNewCards, getOverview, loadQueueInput, readyCount, recordReview, undoReview } from './study'
-import { countCardsIn, createSet, createSubject, deleteSubject, setExamDates } from './subjects'
+import { countCardsIn, createSet, createSubject, createTopic, deleteSubject, deleteTopic, listSets, setExamDates } from './subjects'
 
 const MIN = 60_000
 
@@ -141,8 +141,8 @@ describe('cram and undo (Phase 4)', () => {
   })
 })
 
-describe('new card limit per subject', () => {
-  it('gives each subject its own 20 new cards a day', async () => {
+describe('new card limit per topic', () => {
+  it('gives each subject without topics its own 20 new cards a day', async () => {
     const history = await createSubject('History')
     const politics = await createSubject('Politics')
     const tudors = await createSet(history.id, 'Tudors')
@@ -161,5 +161,50 @@ describe('new card limit per subject', () => {
     expect(readyCount(overview, [uk.id]).newToday).toBe(15)
     const next = pickNext(await loadQueueInput({ kind: 'subject', id: politics.id }, { lastCardId: null, reviewsSinceNew: 0 }))
     expect(next.card?.set_id).toBe(uk.id)
+  })
+})
+
+describe('topics', () => {
+  it('gives each topic in a subject its own 20 new cards a day and its own review', async () => {
+    const history = await createSubject('History')
+    const britain = await createTopic(history.id, '1900s Britain')
+    const tudors = await createTopic(history.id, 'Tudors')
+    const culture = await createSet(history.id, 'Culture', britain.id)
+    const economics = await createSet(history.id, 'Economics', britain.id)
+    const henry = await createSet(history.id, 'Henry VII', tudors.id)
+    const loose = await createSet(history.id, 'Loose cards')
+    for (let i = 0; i < 15; i++) {
+      await addBasicNote(culture.id, `C${i}`, 'A')
+      await addBasicNote(economics.id, `E${i}`, 'A')
+      await addBasicNote(henry.id, `H${i}`, 'A')
+      await addBasicNote(loose.id, `L${i}`, 'A')
+    }
+    // Study 20 new cards from 1900s Britain (culture and economics together).
+    let lastCardId: string | null = null
+    for (let i = 0; i < 20; i++) {
+      const next = pickNext(await loadQueueInput({ kind: 'topic', id: britain.id }, { lastCardId, reviewsSinceNew: 0 }))
+      expect([culture.id, economics.id]).toContain(next.card!.set_id)
+      await recordReview(next.card!.id, 3, 1000)
+      lastCardId = next.card!.id
+    }
+
+    const overview = await getOverview()
+    expect(readyCount(overview, [culture.id, economics.id]).newToday).toBe(0)
+    expect(readyCount(overview, [henry.id]).newToday).toBe(15)
+    expect(readyCount(overview, [loose.id]).newToday).toBe(15)
+    const tudorQueue = await loadQueueInput({ kind: 'topic', id: tudors.id }, { lastCardId: null, reviewsSinceNew: 0 })
+    expect(new Set(tudorQueue.cards.map((c) => c.set_id))).toEqual(new Set([henry.id]))
+    const looseQueue = await loadQueueInput({ kind: 'topic', id: `subject:${history.id}` }, { lastCardId: null, reviewsSinceNew: 0 })
+    expect(new Set(looseQueue.cards.map((c) => c.set_id))).toEqual(new Set([loose.id]))
+  })
+
+  it('keeps the sets and cards when a topic is deleted', async () => {
+    const history = await createSubject('History')
+    const britain = await createTopic(history.id, '1900s Britain')
+    const culture = await createSet(history.id, 'Culture', britain.id)
+    await addBasicNote(culture.id, 'Q', 'A')
+    await deleteTopic(britain.id)
+    expect((await listSets()).find((s) => s.id === culture.id)?.topic_id).toBeNull()
+    expect(await countCardsIn({ setId: culture.id })).toBe(1)
   })
 })

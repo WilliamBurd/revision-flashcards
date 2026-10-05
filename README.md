@@ -17,8 +17,15 @@ with no signal.
 ## Using it
 
 - **Home** (titled Burdis Flashcards) lists your subjects and sets with how many cards are due. Each
-  subject with cards ready has its own big **Review** button at the top, so
-  subjects are never mixed in one review.
+  topic with cards ready has its own big **Review** button at the top, so
+  topics are never mixed in one review.
+- **Topics**: a subject can hold big topics, like **1900s Britain** in
+  History, and each topic holds sets for its aspects (Culture, Economics,
+  Politics, Welfare). Add one with **+ New topic** under a subject (or
+  **Add a topic** in its ⋯ menu), then add sets inside it, or move an
+  existing set in with **Topic** on the set's page. Sets that aren't in a
+  topic still work exactly as before and share one Review button named after
+  the subject. Deleting a topic keeps its sets and cards.
 - **Add** (or the round + button on a phone) first asks which set the cards
   are for, then shows "Adding to History · Tudors" with **Change** at the
   top. (From a set's **Add cards** button, that set is already chosen.)
@@ -98,8 +105,9 @@ with no signal.
   intervals.
 - The app aims for you to remember 90% of cards when they come up, and never
   waits more than 45 days between reviews.
-- Up to 20 new cards are introduced a day in each subject (change it in
-  Settings), so studying History never uses up Politics' new cards. Each set
+- Up to 20 new cards are introduced a day in each topic (change it in
+  Settings), so studying 1900s Britain never uses up another topic's new
+  cards. A subject's sets that aren't in a topic share one limit. Each set
   has its own limit too (20 by default; change it on the set's page). When you
   hit the limit, the end of a review offers **Learn more today**, which is
   handy when you've just added a lot of cards.
@@ -262,9 +270,10 @@ data only removes the copy on that device; signing in again downloads it.
 ```
 src/
 ├── db/          everything stored on the device (Dexie / IndexedDB)
-│   ├── types.ts     the shape of subjects, sets, notes, cards, review logs
+│   ├── types.ts     the shape of subjects, topics, sets, notes, cards, review logs
 │   ├── db.ts        the database and its indexes
-│   ├── subjects.ts  create, rename and delete subjects and sets
+│   ├── subjects.ts  create, rename and delete subjects, topics and sets
+│   ├── outline.ts   a subject's topics and sets in display order
 │   ├── notes.ts     add, edit and delete cards
 │   ├── study.ts     due counts, daily new-card limits, saving and undoing ratings
 │   ├── stats.ts     streak, forecast and leeches for Stats

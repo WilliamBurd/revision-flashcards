@@ -8,6 +8,7 @@ import { CardsBadge, NotePreview } from '../components/NotePreview'
 import SetSelect from '../components/SetSelect'
 import { btn, input, label } from '../components/ui'
 import { db } from '../db/db'
+import { subjectOutline } from '../db/outline'
 import { useLibrary, useTags } from '../db/hooks'
 import { addTagToNotes, deleteNotes, moveNotes, removeTagFromNotes } from '../db/notes'
 import type { Card, Note } from '../db/types'
@@ -24,7 +25,13 @@ export default function Browse() {
   const allTags = useTags()
   const [params, setParams] = useSearchParams()
   const q = params.get('q') ?? ''
-  const where = params.get('set') ? `set:${params.get('set')}` : params.get('subject') ? `subject:${params.get('subject')}` : ''
+  const where = params.get('set')
+    ? `set:${params.get('set')}`
+    : params.get('topic')
+      ? `topic:${params.get('topic')}`
+      : params.get('subject')
+        ? `subject:${params.get('subject')}`
+        : ''
   const tag = params.get('tag') ?? ''
 
   const data = useLiveQuery(async () => {
@@ -51,6 +58,7 @@ export default function Browse() {
   const setWhere = (value: string) => {
     const next = new URLSearchParams(params)
     next.delete('set')
+    next.delete('topic')
     next.delete('subject')
     const [kind, id] = value.split(':')
     if (id) next.set(kind, id)
@@ -62,8 +70,9 @@ export default function Browse() {
     if (!data || !library) return []
     const words = q.toLowerCase().split(/\s+/).filter(Boolean)
     const [kind, id] = where.split(':')
+    const setOf = (n: Note) => library.sets.find((s) => s.id === n.set_id)
     const inScope = (n: Note) =>
-      !id || (kind === 'set' ? n.set_id === id : library.sets.find((s) => s.id === n.set_id)?.subject_id === id)
+      !id || (kind === 'set' ? n.set_id === id : kind === 'topic' ? setOf(n)?.topic_id === id : setOf(n)?.subject_id === id)
     const lowerTag = tag.toLowerCase()
     return data.notes
       .filter(({ note, search }) => inScope(note) && (!tag || note.tags?.some((t) => t.toLowerCase() === lowerTag)) && words.every((w) => search.includes(w)))
@@ -123,13 +132,14 @@ export default function Browse() {
                 {library.subjects.map((subject) => (
                   <optgroup key={subject.id} label={subject.name}>
                     <option value={`subject:${subject.id}`}>All of {subject.name}</option>
-                    {library.sets
-                      .filter((s) => s.subject_id === subject.id)
-                      .map((s) => (
+                    {subjectOutline(subject, library.topics, library.sets).flatMap((g) => [
+                      ...(g.topic ? [<option key={g.key} value={`topic:${g.topic.id}`}>All of {g.topic.name}</option>] : []),
+                      ...g.sets.map((s) => (
                         <option key={s.id} value={`set:${s.id}`}>
-                          {s.name}
+                          {g.topic ? `${g.topic.name} · ${s.name}` : s.name}
                         </option>
-                      ))}
+                      )),
+                    ])}
                   </optgroup>
                 ))}
               </select>
