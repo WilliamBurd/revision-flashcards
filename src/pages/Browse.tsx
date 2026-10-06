@@ -44,7 +44,8 @@ export default function Browse() {
   })
 
   const [shown, setShown] = useState(PAGE)
-  const [selecting, setSelecting] = useState(false)
+  // "Move cards" on a set's page opens Browse ready to pick cards.
+  const [selecting, setSelecting] = useState(() => params.get('select') === '1')
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [dialog, setDialog] = useState<Dialog>(null)
 

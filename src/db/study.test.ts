@@ -3,7 +3,7 @@ import { pickNext } from '../session/buildQueue'
 import { db } from './db'
 import { addBasicNote, updateNote } from './notes'
 import { allowMoreNewCards, getOverview, loadQueueInput, readyCount, recordReview, undoReview } from './study'
-import { countCardsIn, createSet, createSubject, createTopic, deleteSubject, deleteTopic, listSets, setExamDates } from './subjects'
+import { countCardsIn, createSet, createSubject, createTopic, deleteSubject, deleteTopic, listSets, moveSet, setExamDates } from './subjects'
 
 const MIN = 60_000
 
@@ -206,5 +206,20 @@ describe('topics', () => {
     await deleteTopic(britain.id)
     expect((await listSets()).find((s) => s.id === culture.id)?.topic_id).toBeNull()
     expect(await countCardsIn({ setId: culture.id })).toBe(1)
+  })
+
+  it('moves a set to another subject and topic with its cards and progress', async () => {
+    const history = await createSubject('History')
+    const politics = await createSubject('Politics')
+    const uk = await createTopic(politics.id, 'UK politics')
+    const set = await createSet(history.id, 'Elections')
+    await addBasicNote(set.id, 'Q', 'A')
+    const [card] = await db.cards.toArray()
+    const reviewed = (await recordReview(card.id, 3, 1000)).card
+    await moveSet(set.id, politics.id, uk.id)
+    expect((await listSets()).find((s) => s.id === set.id)).toMatchObject({ subject_id: politics.id, topic_id: uk.id })
+    expect(await db.cards.get(card.id)).toMatchObject({ set_id: set.id, due: reviewed.due, deleted: false })
+    const queue = await loadQueueInput({ kind: 'topic', id: uk.id }, { lastCardId: null, reviewsSinceNew: 0 })
+    expect(queue.cards.map((c) => c.id)).toEqual([card.id])
   })
 })

@@ -8,8 +8,8 @@ import NameDialog from '../components/NameDialog'
 import { CardsBadge, NotePreview } from '../components/NotePreview'
 import { btn, input, panel } from '../components/ui'
 import { db } from '../db/db'
-import { useOverview } from '../db/hooks'
-import { deleteSet, updateSet } from '../db/subjects'
+import { useLibrary, useOverview } from '../db/hooks'
+import { deleteSet, moveSet, updateSet } from '../db/subjects'
 import { download, exportBackup, safeFileName } from '../backup/backup'
 import { exportSetCsv, importCsv } from '../backup/cards-csv'
 import type { Card, Note } from '../db/types'
@@ -18,6 +18,7 @@ export default function SetPage() {
   const { id = '' } = useParams()
   const navigate = useNavigate()
   const overview = useOverview()
+  const library = useLibrary()
   const data = useLiveQuery(async () => {
     const set = await db.sets.get(id)
     if (!set || set.deleted) return null
@@ -39,7 +40,7 @@ export default function SetPage() {
   }, [id])
   const [dialog, setDialog] = useState<'rename' | 'delete' | null>(null)
 
-  if (data === undefined || !overview) return null
+  if (data === undefined || !overview || !library) return null
   if (data === null) return <p className="py-6 text-muted">This set has been deleted.</p>
 
   const { set, subject, topics, notes, cardsByNote } = data
@@ -87,8 +88,8 @@ export default function SetPage() {
       <div className="mt-8 mb-2 flex items-center justify-between">
         <h2 className="text-lg font-semibold">Cards</h2>
         {notes.length > 0 && (
-          <Link to={`/browse?set=${set.id}`} className={`${btn.ghost} -mr-4`}>
-            Search or select
+          <Link to={`/browse?set=${set.id}&select=1`} className={`${btn.ghost} -mr-4`}>
+            Move cards
           </Link>
         )}
       </div>
@@ -105,25 +106,35 @@ export default function SetPage() {
       <h2 className="mt-8 mb-2 text-lg font-semibold">Set options</h2>
       <div className={`${panel} flex flex-col gap-4 p-4`}>
         <div className="flex flex-col gap-1">
-          <label className="flex items-center justify-between gap-4">
-            <span>Topic</span>
-            <select
-              className={`${input.replace('w-full ', '')} w-44 shrink-0 py-2 text-base`}
-              value={topic?.id ?? ''}
-              onChange={(e) => void updateSet(set.id, { topic_id: e.target.value || null })}
-            >
-              <option value="">None</option>
-              {topics.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
+          <label htmlFor="set-place" className="font-medium">
+            Subject and topic
           </label>
+          <select
+            id="set-place"
+            className={`${input} py-2 text-base`}
+            value={topic ? `topic:${topic.id}` : `subject:${set.subject_id}`}
+            onChange={(e) => {
+              const [kind, id] = e.target.value.split(':')
+              const to = kind === 'topic' ? library.topics.find((t) => t.id === id) : null
+              void moveSet(set.id, to ? to.subject_id : id, to ? to.id : null)
+            }}
+          >
+            {library.subjects.map((s) => (
+              <optgroup key={s.id} label={s.name}>
+                <option value={`subject:${s.id}`}>{s.name} (no topic)</option>
+                {library.topics
+                  .filter((t) => t.subject_id === s.id)
+                  .map((t) => (
+                    <option key={t.id} value={`topic:${t.id}`}>
+                      {s.name} · {t.name}
+                    </option>
+                  ))}
+              </optgroup>
+            ))}
+          </select>
           <p className="text-sm text-muted">
-            {topics.length
-              ? 'Each topic has its own Review button and its own daily limit of new cards.'
-              : `Add topics (like 1900s Britain) from ${subject?.name ?? 'the subject'}'s menu on Home, then move sets into them here.`}
+            Moves this set with all its cards and their progress. Each topic has its own Review button and its own daily
+            limit of new cards. To move single cards, use <strong>Move cards</strong> above.
           </p>
         </div>
         <label className="flex items-center justify-between gap-4">
