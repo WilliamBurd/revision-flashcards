@@ -269,3 +269,16 @@ describe('order', () => {
   })
 })
 
+describe('choosing sets', () => {
+  it('reviews only the ticked sets', async () => {
+    const history = await createSubject('History')
+    const topic = await createTopic(history.id, 'Tudors')
+    const a = await createSet(history.id, 'Henry VII', topic.id)
+    const b = await createSet(history.id, 'Henry VIII', topic.id)
+    const c = await createSet(history.id, 'Edward VI', topic.id)
+    for (const set of [a, b, c]) await addBasicNote(set.id, set.name, 'A')
+    const queue = await loadQueueInput({ kind: 'sets', ids: [a.id, c.id, 'gone'] }, { lastCardId: null, reviewsSinceNew: 0 })
+    expect(new Set(queue.cards.map((card) => card.set_id))).toEqual(new Set([a.id, c.id]))
+  })
+})
+
