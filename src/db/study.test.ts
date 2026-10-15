@@ -3,7 +3,7 @@ import { pickNext } from '../session/buildQueue'
 import { db } from './db'
 import { addBasicNote, updateNote } from './notes'
 import { allowMoreNewCards, getOverview, loadQueueInput, readyCount, recordReview, resetSetProgress, undoReview } from './study'
-import { countCardsIn, createSet, createSubject, createTopic, deleteSubject, deleteTopic, listSets, moveSet, setExamDates } from './subjects'
+import { countCardsIn, createSet, createSubject, createTopic, deleteSubject, deleteTopic, listSets, listSubjects, listTopics, moveSet, reorder, setExamDates } from './subjects'
 
 const MIN = 60_000
 
@@ -248,6 +248,24 @@ describe('reset progress', () => {
     expect((await db.notes.toArray()).filter((n) => !n.deleted)).toHaveLength(3)
     expect(await db.cards.get(keep.id)).toEqual(otherBefore)
     expect((await getOverview(10 * MIN)).bySet.get(set.id)).toMatchObject({ total: 2, new: 2, learning: 0, known: 0 })
+  })
+})
+
+describe('order', () => {
+  it('shows subjects, topics and sets in the order chosen', async () => {
+    const history = await createSubject('History')
+    const politics = await createSubject('Politics')
+    const a = await createTopic(history.id, 'Tudors')
+    const b = await createTopic(history.id, 'Stuarts')
+    const one = await createSet(history.id, 'One', a.id)
+    const two = await createSet(history.id, 'Two', a.id)
+    await reorder('subjects', [politics.id, history.id])
+    await reorder('topics', [b.id, a.id])
+    await reorder('sets', [two.id, one.id])
+    expect((await listSubjects()).map((s) => s.name)).toEqual(['Politics', 'History'])
+    expect((await listTopics()).map((t) => t.name)).toEqual(['Stuarts', 'Tudors'])
+    expect((await listSets()).map((s) => s.name)).toEqual(['Two', 'One'])
+    expect((await db.subjects.get(history.id))?.dirty).toBe(1)
   })
 })
 

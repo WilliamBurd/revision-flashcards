@@ -4,6 +4,7 @@ import AddCard from './pages/AddCard'
 import Browse from './pages/Browse'
 import EditCard from './pages/EditCard'
 import Home from './pages/Home'
+import Reorder from './pages/Reorder'
 import Review from './pages/Review'
 import SetPage from './pages/SetPage'
 import Settings from './pages/Settings'
@@ -30,6 +31,7 @@ export default function App() {
         <Route path="/browse" element={<Browse />} />
         <Route path="/stats" element={<Stats />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/reorder" element={<Reorder />} />
         <Route path="*" element={<Home />} />
       </Route>
     </Routes>
