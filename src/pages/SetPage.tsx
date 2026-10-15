@@ -9,6 +9,7 @@ import { CardsBadge, NotePreview } from '../components/NotePreview'
 import { btn, input, panel } from '../components/ui'
 import { db } from '../db/db'
 import { useLibrary, useOverview } from '../db/hooks'
+import { resetSetProgress } from '../db/study'
 import { deleteSet, moveSet, updateSet } from '../db/subjects'
 import { download, exportBackup, safeFileName } from '../backup/backup'
 import { exportSetCsv, importCsv } from '../backup/cards-csv'
@@ -38,7 +39,7 @@ export default function SetPage() {
       cardsByNote,
     }
   }, [id])
-  const [dialog, setDialog] = useState<'rename' | 'delete' | null>(null)
+  const [dialog, setDialog] = useState<'rename' | 'reset' | 'delete' | null>(null)
 
   if (data === undefined || !overview || !library) return null
   if (data === null) return <p className="py-6 text-muted">This set has been deleted.</p>
@@ -176,10 +177,15 @@ export default function SetPage() {
           </p>
         </div>
         <CsvTools setId={set.id} fileName={safeFileName(`${subject?.name ?? 'Cards'} - ${set.name}`)} />
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button type="button" className={btn.secondary} onClick={() => setDialog('rename')}>
             Rename
           </button>
+          {notes.length > 0 && (
+            <button type="button" className={btn.secondary} onClick={() => setDialog('reset')}>
+              Reset progress…
+            </button>
+          )}
           <button type="button" className={`${btn.secondary} text-danger`} onClick={() => setDialog('delete')}>
             Delete set…
           </button>
@@ -193,6 +199,14 @@ export default function SetPage() {
         initial={set.name}
         submitLabel="Rename"
         onSubmit={(name) => void updateSet(set.id, { name })}
+        onClose={() => setDialog(null)}
+      />
+      <ConfirmDialog
+        open={dialog === 'reset'}
+        title={`Reset progress in ${set.name}?`}
+        message={`All ${counts?.total ?? 0} ${counts?.total === 1 ? 'card' : 'cards'} go back to new, as if you'd never reviewed them, and this set's review history is cleared. The cards themselves stay. They come back as new cards, up to your daily limit of new cards.`}
+        confirmLabel="Reset progress"
+        onConfirm={() => void resetSetProgress(set.id)}
         onClose={() => setDialog(null)}
       />
       <ConfirmDialog

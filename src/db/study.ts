@@ -4,7 +4,7 @@
 import { dayKey, dayStart, nextDayStart } from '../lib/day'
 import { newId } from '../lib/ids'
 import { examDatesFor, latestBeforeExam, nextExamStart, settingsForExam } from '../scheduler/exams'
-import { LEECH_THRESHOLD, makeScheduler, previewIntervals, rateCard } from '../scheduler/fsrs'
+import { LEECH_THRESHOLD, makeScheduler, newCardSchedule, previewIntervals, rateCard } from '../scheduler/fsrs'
 import type { QueueInput } from '../session/buildQueue'
 import { db } from './db'
 import { getSettings, updateSettings } from './settings'
@@ -298,6 +298,35 @@ export async function undoReview(result: ReviewResult, now = Date.now()): Promis
     const restore: Partial<Card> = { updated_at: now }
     for (const f of SCHEDULE_FIELDS) (restore as Record<string, unknown>)[f] = result.before[f]
     await db.cards.update(result.before.id, restore)
+  })
+}
+
+/**
+ * Start a set again: every card in it becomes new, as if it had never been
+ * reviewed, and the leech flags are cleared. The notes and their text stay.
+ *
+ * Each card's study record starts again from now, so its created_at moves to
+ * now too (a few milliseconds apart, keeping the cards in the order they were
+ * added). The set's review history is deleted, and any older review that
+ * arrives later from another device is ignored when a sync rebuilds the
+ * schedule (see sync/replay.ts), so the old progress can't come back.
+ * Returns how many cards were reset.
+ */
+export async function resetSetProgress(setId: string, now = Date.now()): Promise<number> {
+  return db.transaction('rw', db.cards, db.review_logs, async () => {
+    const cards = (await db.cards.where('set_id').equals(setId).toArray())
+      .filter((c) => !c.deleted)
+      .sort((a, b) => a.created_at - b.created_at || a.id.localeCompare(b.id))
+    for (const [i, card] of cards.entries()) {
+      const start = now + i
+      await db.cards.update(card.id, { ...newCardSchedule(start), is_leech: false, created_at: start, updated_at: start })
+      await db.review_logs
+        .where('card_id')
+        .equals(card.id)
+        .filter((l) => !l.deleted)
+        .modify({ deleted: true, updated_at: now })
+    }
+    return cards.length
   })
 }
 
