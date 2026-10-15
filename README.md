@@ -18,7 +18,9 @@ with no signal.
 
 - **Home** (titled Burdis Flashcards) lists your subjects and sets with how many cards are due. Each
   topic with cards ready has its own big **Review** button at the top, so
-  topics are never mixed in one review.
+  topics are never mixed in one review. Tapping it opens a list of the
+  topic's sets to tick or untick before you start; the app remembers your
+  choice for next time on that device.
 - **Topics**: a subject can hold big topics, like **1900s Britain** in
   History, and each topic holds sets for its aspects (Culture, Economics,
   Politics, Welfare). Add one with **+ New topic** under a subject (or

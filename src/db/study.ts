@@ -17,6 +17,8 @@ export type Scope =
   | { kind: 'subject'; id: string }
   | { kind: 'topic'; id: string }
   | { kind: 'set'; id: string }
+  /** Sets ticked on the Choose sets screen before a review. */
+  | { kind: 'sets'; ids: string[] }
 
 export interface SetCounts {
   total: number
@@ -164,6 +166,10 @@ export function readyCount(overview: StudyOverview, setIds: string[]): { due: nu
 export async function setIdsInScope(scope: Scope): Promise<string[]> {
   const sets = await listSets()
   if (scope.kind === 'set') return sets.some((s) => s.id === scope.id) ? [scope.id] : []
+  if (scope.kind === 'sets') {
+    const chosen = new Set(scope.ids)
+    return sets.filter((s) => chosen.has(s.id)).map((s) => s.id)
+  }
   if (scope.kind === 'subject') return sets.filter((s) => s.subject_id === scope.id).map((s) => s.id)
   if (scope.kind === 'topic') {
     const topicIds = await liveTopicIds()

@@ -20,16 +20,19 @@ export default function Review() {
   const subject = params.get('subject')
   const topic = params.get('topic')
   const set = params.get('set')
+  const chosen = params.get('sets')
   const scope = useMemo<Scope>(
     () =>
-      set
-        ? { kind: 'set', id: set }
-        : topic
-          ? { kind: 'topic', id: topic }
-          : subject
-            ? { kind: 'subject', id: subject }
-            : { kind: 'all' },
-    [set, topic, subject],
+      chosen !== null
+        ? { kind: 'sets', ids: chosen.split(',').filter(Boolean) }
+        : set
+          ? { kind: 'set', id: set }
+          : topic
+            ? { kind: 'topic', id: topic }
+            : subject
+              ? { kind: 'subject', id: subject }
+              : { kind: 'all' },
+    [chosen, set, topic, subject],
   )
   const cram = params.get('cram') === '1'
   const { state, summary, reviewed, intervals, reveal, rate, undo, canUndo, refreshNote, learnMore } = useReviewSession(scope, cram)

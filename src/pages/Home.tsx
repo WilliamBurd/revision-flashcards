@@ -99,7 +99,7 @@ export default function Home() {
                   return (
                     <Link
                       key={group.key}
-                      to={`/review?topic=${encodeURIComponent(group.key)}`}
+                      to={`/start?topic=${encodeURIComponent(group.key)}`}
                       className="hero-shadow flex min-h-20 items-center gap-4 rounded-card px-5 py-4 transition hover:brightness-110 active:scale-[0.99]"
                       style={{ background: paint.badge, color: paint.badgeInk }}
                     >

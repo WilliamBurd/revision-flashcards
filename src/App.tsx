@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router-dom'
 import Layout from './components/Layout'
 import AddCard from './pages/AddCard'
 import Browse from './pages/Browse'
+import ChooseSets from './pages/ChooseSets'
 import EditCard from './pages/EditCard'
 import Home from './pages/Home'
 import Reorder from './pages/Reorder'
@@ -32,6 +33,7 @@ export default function App() {
         <Route path="/stats" element={<Stats />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/reorder" element={<Reorder />} />
+        <Route path="/start" element={<ChooseSets />} />
         <Route path="*" element={<Home />} />
       </Route>
     </Routes>
