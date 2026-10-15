@@ -123,6 +123,12 @@ export interface Settings {
   new_cards_per_day_total: number
   /** Extra new cards allowed today, from the "Learn more new cards" button. */
   extra_new_cards: { day: string; count: number }
+  /**
+   * A colour picked for a subject, as #rrggbb by subject id. Subjects without
+   * one use the theme's colours by position. Kept in settings so it syncs
+   * without a new database column.
+   */
+  subject_colours?: Record<string, string>
   /** Phase 4 syncs this; for now the theme lives on each device (lib/theme.ts). */
   theme: 'auto' | 'white' | 'light-grey' | 'medium-grey' | 'dark-grey' | 'black' | 'navy' | 'midnight'
 }
