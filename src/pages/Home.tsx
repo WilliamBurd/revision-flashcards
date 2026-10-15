@@ -1,5 +1,7 @@
+import { useLiveQuery } from 'dexie-react-hooks'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import ColourSwatches from '../components/ColourSwatches'
 import ConfirmDialog from '../components/ConfirmDialog'
 import ExamDatesDialog from '../components/ExamDatesDialog'
 import { ProgressBar, ProgressKey } from '../components/Counts'
@@ -10,9 +12,11 @@ import Modal from '../components/Modal'
 import NameDialog from '../components/NameDialog'
 import { btn } from '../components/ui'
 import { useLibrary, useOverview } from '../db/hooks'
+import { getSettings, updateSettings } from '../db/settings'
 import { subjectOutline } from '../db/outline'
 import { readyCount, type StudyOverview } from '../db/study'
 import { daysUntil, nextExam } from '../scheduler/exams'
+import { subjectPaint, type SubjectPaint } from '../lib/look'
 import {
   countCardsIn,
   createSet,
@@ -29,6 +33,7 @@ type Dialog =
   | { kind: 'new-subject' }
   | { kind: 'menu'; subject: Subject }
   | { kind: 'rename'; subject: Subject }
+  | { kind: 'colour'; subject: Subject }
   | { kind: 'exams'; subject: Subject }
   | { kind: 'new-set'; subject: Subject; topic: Topic | null }
   | { kind: 'delete'; subject: Subject; cardCount: number }
@@ -41,10 +46,12 @@ export default function Home() {
   const library = useLibrary()
   const overview = useOverview()
   const [dialog, setDialog] = useState<Dialog | null>(null)
+  const picked = useLiveQuery(async () => (await getSettings()).subject_colours ?? {}, [])
   const { openThemePicker, openAccount } = useLayout()
   const close = () => setDialog(null)
 
-  if (!library || !overview) return null
+  if (!library || !overview || !picked) return null
+  const paintOf = (subject: Subject, i: number) => subjectPaint(picked[subject.id], i)
   const { subjects, topics, sets } = library
   const groupsOf = (subject: Subject) => subjectOutline(subject, topics, sets)
   const ready = readyCount(
@@ -85,13 +92,13 @@ export default function Home() {
                   )
                   const total = groupReady.due + groupReady.newToday
                   if (total === 0) return null
-                  const colour = (i % 4) + 1
+                  const paint = paintOf(subject, i)
                   return (
                     <Link
                       key={group.key}
                       to={`/review?topic=${encodeURIComponent(group.key)}`}
                       className="hero-shadow flex min-h-20 items-center gap-4 rounded-card px-5 py-4 transition hover:brightness-110 active:scale-[0.99]"
-                      style={{ background: `var(--subject-${colour}-badge)`, color: `var(--subject-${colour}-badge-ink)` }}
+                      style={{ background: paint.badge, color: paint.badgeInk }}
                     >
                       <span className="flex min-w-0 flex-1 flex-col">
                         <span className="truncate text-xl font-bold">Review {group.topic?.name ?? subject.name}</span>
@@ -115,15 +122,15 @@ export default function Home() {
           )}
 
           {subjects.map((subject, i) => {
-            const colour = (i % 4) + 1
+            const paint = paintOf(subject, i)
             const exam = nextExam(subject.exam_dates, Date.now())
             return (
               <section key={subject.id} aria-labelledby={`subject-${subject.id}`} className="card overflow-hidden">
                 <div
                   className="flex items-center gap-2 py-2 pr-2 pl-4"
-                  style={{ background: `var(--subject-${colour}-head)`, color: `var(--subject-${colour}-head-ink)` }}
+                  style={{ background: paint.head, color: paint.headInk }}
                 >
-                  <span className="h-3 w-3 shrink-0 rounded" style={{ background: `var(--subject-${colour})` }} />
+                  <span className="h-3 w-3 shrink-0 rounded" style={{ background: paint.dot }} />
                   <div className="flex min-w-0 flex-1 flex-col">
                     <h2 id={`subject-${subject.id}`} className="font-display truncate text-lg">
                       {subject.name}
@@ -161,7 +168,7 @@ export default function Home() {
                     )}
                     <ul>
                       {group.sets.map((set) => (
-                        <SetRow key={set.id} set={set} overview={overview} colour={colour} />
+                        <SetRow key={set.id} set={set} overview={overview} paint={paint} />
                       ))}
                       {group.topic && (
                         <li className="border-t border-line">
@@ -280,6 +287,21 @@ export default function Home() {
         onSubmit={(name) => dialog?.kind === 'rename' && void renameSubject(dialog.subject.id, name)}
         onClose={close}
       />
+      <Modal open={dialog?.kind === 'colour'} onClose={close} title={dialog?.kind === 'colour' ? `Colour for ${dialog.subject.name}` : ''}>
+        {dialog?.kind === 'colour' && (
+          <div className="flex flex-col gap-5">
+            <ColourSwatches
+              value={picked[dialog.subject.id] ?? null}
+              onChange={(hex) => void setSubjectColour(dialog.subject.id, hex)}
+              autoTitle="The theme's colour for this subject's place on Home"
+            />
+            <p className="text-sm text-muted">Shown on this subject's Review buttons and due counts, on all your devices.</p>
+            <button type="button" className={`${btn.primary} self-end`} onClick={close}>
+              Done
+            </button>
+          </div>
+        )}
+      </Modal>
       <Modal open={dialog?.kind === 'menu'} onClose={close} title={dialog?.kind === 'menu' ? dialog.subject.name : ''}>
         {dialog?.kind === 'menu' && (
           <div className="flex flex-col gap-2">
@@ -294,6 +316,9 @@ export default function Home() {
             </button>
             <button type="button" className={btn.secondary} onClick={() => setDialog({ kind: 'rename', subject: dialog.subject })}>
               Rename
+            </button>
+            <button type="button" className={btn.secondary} onClick={() => setDialog({ kind: 'colour', subject: dialog.subject })}>
+              Colour
             </button>
             <button
               type="button"
@@ -325,7 +350,7 @@ export default function Home() {
   )
 }
 
-function SetRow({ set, overview, colour }: { set: CardSet; overview: StudyOverview; colour: number }) {
+function SetRow({ set, overview, paint }: { set: CardSet; overview: StudyOverview; paint: SubjectPaint }) {
   const counts = overview.bySet.get(set.id)
   const due = (counts?.due ?? 0) + (counts?.newToday ?? 0)
   return (
@@ -340,7 +365,7 @@ function SetRow({ set, overview, colour }: { set: CardSet; overview: StudyOvervi
           </span>
           <span
             className={`min-w-9 rounded-full px-2.5 py-1 text-center text-sm font-bold ${due ? '' : 'bg-line text-muted'}`}
-            style={due ? { background: `var(--subject-${colour}-badge)`, color: `var(--subject-${colour}-badge-ink)` } : undefined}
+            style={due ? { background: paint.badge, color: paint.badgeInk } : undefined}
             aria-label={`${due} to review`}
           >
             {due}
@@ -384,3 +409,11 @@ function examCountdown(name: string, days: number) {
   if (days === 1) return `${what} tomorrow`
   return `${what} in ${days} days`
 }
+
+async function setSubjectColour(subjectId: string, hex: string | null): Promise<void> {
+  const colours = { ...(await getSettings()).subject_colours }
+  if (hex) colours[subjectId] = hex.toLowerCase()
+  else delete colours[subjectId]
+  await updateSettings({ subject_colours: colours })
+}
+

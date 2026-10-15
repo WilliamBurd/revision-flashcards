@@ -60,6 +60,29 @@ export function textOn(hex: string): string {
   return luminance > 0.18 ? '#0b0b0f' : '#ffffff'
 }
 
+/** How a subject is coloured on Home: its picked colour, or the theme's colour for its position. */
+export interface SubjectPaint {
+  dot: string
+  head: string
+  headInk: string
+  badge: string
+  badgeInk: string
+}
+
+export function subjectPaint(picked: string | undefined, position: number): SubjectPaint {
+  if (picked && HEX.test(picked)) {
+    return { dot: picked, head: 'transparent', headInk: 'var(--ink)', badge: picked, badgeInk: textOn(picked) }
+  }
+  const n = (position % 4) + 1
+  return {
+    dot: `var(--subject-${n})`,
+    head: `var(--subject-${n}-head)`,
+    headInk: `var(--subject-${n}-head-ink)`,
+    badge: `var(--subject-${n}-badge)`,
+    badgeInk: `var(--subject-${n}-badge-ink)`,
+  }
+}
+
 /** The CSS variables that make up an accent, mixed with the theme's own page and text colours. */
 export function accentVars(hex: string): Record<string, string> {
   return {

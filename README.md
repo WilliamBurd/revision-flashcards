@@ -77,6 +77,10 @@ with no signal.
   in a random order, whether due or not. No Idea brings a card back a few
   cards later. Cram ratings are saved in your history but never change when
   a card is next due.
+- **Subject colours**: in a subject's ⋯ menu on Home, **Colour** picks its
+  colour (a preset or any colour). It's used for the subject's Review
+  buttons and due counts, and syncs to your other devices. **Auto** goes
+  back to the theme's colours.
 - **Reset progress**: on a set's page, **Reset progress…** makes every card
   in the set new again, as if you'd never reviewed it, and clears the set's
   review history. The cards stay. They come back as new cards, up to your
