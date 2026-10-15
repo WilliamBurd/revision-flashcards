@@ -80,7 +80,8 @@ with no signal.
 - **Subject colours**: in a subject's ⋯ menu on Home, **Colour** picks its
   colour (a preset or any colour). It's used for the subject's Review
   buttons and due counts, and syncs to your other devices. **Auto** goes
-  back to the theme's colours.
+  back to the theme's colours. A topic's ⋯ menu has **Colour** too, for its
+  own Review button and its sets; Auto there uses the subject's colour.
 - **Change order**: the **Change order** button at the bottom of Home lists
   your subjects, topics and sets with up and down arrows. Home, the Review
   buttons and the set pickers follow that order, and it syncs to your other
