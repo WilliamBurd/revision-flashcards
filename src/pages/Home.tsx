@@ -206,9 +206,14 @@ export default function Home() {
 
           <ProgressKey />
 
-          <button type="button" className={`${btn.secondary} w-full`} onClick={() => setDialog({ kind: 'new-subject' })}>
-            + New subject
-          </button>
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" className={btn.secondary} onClick={() => setDialog({ kind: 'new-subject' })}>
+              + New subject
+            </button>
+            <Link to="/reorder" className={btn.secondary}>
+              Change order
+            </Link>
+          </div>
         </>
       )}
 
