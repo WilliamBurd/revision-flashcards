@@ -151,3 +151,18 @@ export async function deleteSubject(id: string): Promise<void> {
     await db.cards.where('set_id').anyOf(setIds).modify(gone)
   })
 }
+
+/**
+ * Put subjects, or the topics or sets that sit together, in the order given:
+ * the first id shows first. Only records whose position changes are saved.
+ */
+export async function reorder(table: 'subjects' | 'topics' | 'sets', ids: string[]): Promise<void> {
+  const now = Date.now()
+  await db.transaction('rw', db.table(table), async () => {
+    for (const [sort_order, id] of ids.entries()) {
+      const row = (await db.table(table).get(id)) as { sort_order: number } | undefined
+      if (row && row.sort_order !== sort_order) await db.table(table).update(id, { sort_order, updated_at: now })
+    }
+  })
+}
+

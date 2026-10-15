@@ -77,6 +77,10 @@ with no signal.
   in a random order, whether due or not. No Idea brings a card back a few
   cards later. Cram ratings are saved in your history but never change when
   a card is next due.
+- **Change order**: the **Change order** button at the bottom of Home lists
+  your subjects, topics and sets with up and down arrows. Home, the Review
+  buttons and the set pickers follow that order, and it syncs to your other
+  devices.
 - **Reset progress**: on a set's page, **Reset progress…** makes every card
   in the set new again, as if you'd never reviewed it, and clears the set's
   review history. The cards stay. They come back as new cards, up to your
