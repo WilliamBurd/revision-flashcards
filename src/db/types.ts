@@ -124,8 +124,9 @@ export interface Settings {
   /** Extra new cards allowed today, from the "Learn more new cards" button. */
   extra_new_cards: { day: string; count: number }
   /**
-   * A colour picked for a subject, as #rrggbb by subject id. Subjects without
-   * one use the theme's colours by position. Kept in settings so it syncs
+   * Colours picked for subjects and topics, as #rrggbb by subject or topic
+   * id. A subject without one uses the theme's colour for its position; a
+   * topic without one uses its subject's. Kept in settings so it syncs
    * without a new database column.
    */
   subject_colours?: Record<string, string>

@@ -33,7 +33,7 @@ type Dialog =
   | { kind: 'new-subject' }
   | { kind: 'menu'; subject: Subject }
   | { kind: 'rename'; subject: Subject }
-  | { kind: 'colour'; subject: Subject }
+  | { kind: 'colour'; id: string; name: string; isTopic: boolean }
   | { kind: 'exams'; subject: Subject }
   | { kind: 'new-set'; subject: Subject; topic: Topic | null }
   | { kind: 'delete'; subject: Subject; cardCount: number }
@@ -52,6 +52,9 @@ export default function Home() {
 
   if (!library || !overview || !picked) return null
   const paintOf = (subject: Subject, i: number) => subjectPaint(picked[subject.id], i)
+  /** A topic's own colour if it has one, otherwise its subject's. */
+  const groupPaint = (topic: Topic | null, fallback: SubjectPaint) =>
+    topic && picked[topic.id] ? subjectPaint(picked[topic.id], 0) : fallback
   const { subjects, topics, sets } = library
   const groupsOf = (subject: Subject) => subjectOutline(subject, topics, sets)
   const ready = readyCount(
@@ -92,7 +95,7 @@ export default function Home() {
                   )
                   const total = groupReady.due + groupReady.newToday
                   if (total === 0) return null
-                  const paint = paintOf(subject, i)
+                  const paint = groupPaint(group.topic, paintOf(subject, i))
                   return (
                     <Link
                       key={group.key}
@@ -150,6 +153,9 @@ export default function Home() {
                   <div key={group.key}>
                     {group.topic ? (
                       <div className="flex items-center gap-2 border-t border-line bg-raised py-1 pr-2 pl-4">
+                        {picked[group.topic.id] && (
+                          <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: picked[group.topic.id] }} />
+                        )}
                         <h3 className="min-w-0 flex-1 truncate font-bold">{group.topic.name}</h3>
                         <button
                           type="button"
@@ -168,7 +174,7 @@ export default function Home() {
                     )}
                     <ul>
                       {group.sets.map((set) => (
-                        <SetRow key={set.id} set={set} overview={overview} paint={paint} />
+                        <SetRow key={set.id} set={set} overview={overview} paint={groupPaint(group.topic, paint)} />
                       ))}
                       {group.topic && (
                         <li className="border-t border-line">
@@ -269,6 +275,13 @@ export default function Home() {
             <button type="button" className={btn.secondary} onClick={() => setDialog({ kind: 'rename-topic', topic: dialog.topic })}>
               Rename
             </button>
+            <button
+              type="button"
+              className={btn.secondary}
+              onClick={() => setDialog({ kind: 'colour', id: dialog.topic.id, name: dialog.topic.name, isTopic: true })}
+            >
+              Colour
+            </button>
             <button type="button" className={`${btn.secondary} text-danger`} onClick={() => setDialog({ kind: 'delete-topic', topic: dialog.topic })}>
               Delete…
             </button>
@@ -292,15 +305,19 @@ export default function Home() {
         onSubmit={(name) => dialog?.kind === 'rename' && void renameSubject(dialog.subject.id, name)}
         onClose={close}
       />
-      <Modal open={dialog?.kind === 'colour'} onClose={close} title={dialog?.kind === 'colour' ? `Colour for ${dialog.subject.name}` : ''}>
+      <Modal open={dialog?.kind === 'colour'} onClose={close} title={dialog?.kind === 'colour' ? `Colour for ${dialog.name}` : ''}>
         {dialog?.kind === 'colour' && (
           <div className="flex flex-col gap-5">
             <ColourSwatches
-              value={picked[dialog.subject.id] ?? null}
-              onChange={(hex) => void setSubjectColour(dialog.subject.id, hex)}
-              autoTitle="The theme's colour for this subject's place on Home"
+              value={picked[dialog.id] ?? null}
+              onChange={(hex) => void setColour(dialog.id, hex)}
+              autoTitle={dialog.isTopic ? "The subject's colour" : "The theme's colour for this subject's place on Home"}
             />
-            <p className="text-sm text-muted">Shown on this subject's Review buttons and due counts, on all your devices.</p>
+            <p className="text-sm text-muted">
+              {dialog.isTopic
+                ? "Shown on this topic's Review button and its sets' due counts, on all your devices. Auto uses the subject's colour."
+                : "Shown on this subject's Review buttons and due counts, on all your devices. Topics with their own colour keep it."}
+            </p>
             <button type="button" className={`${btn.primary} self-end`} onClick={close}>
               Done
             </button>
@@ -322,7 +339,7 @@ export default function Home() {
             <button type="button" className={btn.secondary} onClick={() => setDialog({ kind: 'rename', subject: dialog.subject })}>
               Rename
             </button>
-            <button type="button" className={btn.secondary} onClick={() => setDialog({ kind: 'colour', subject: dialog.subject })}>
+            <button type="button" className={btn.secondary} onClick={() => setDialog({ kind: 'colour', id: dialog.subject.id, name: dialog.subject.name, isTopic: false })}>
               Colour
             </button>
             <button
@@ -415,10 +432,11 @@ function examCountdown(name: string, days: number) {
   return `${what} in ${days} days`
 }
 
-async function setSubjectColour(subjectId: string, hex: string | null): Promise<void> {
+/** Pick a subject's or topic's colour, or null to go back to Auto. */
+async function setColour(id: string, hex: string | null): Promise<void> {
   const colours = { ...(await getSettings()).subject_colours }
-  if (hex) colours[subjectId] = hex.toLowerCase()
-  else delete colours[subjectId]
+  if (hex) colours[id] = hex.toLowerCase()
+  else delete colours[id]
   await updateSettings({ subject_colours: colours })
 }
 
