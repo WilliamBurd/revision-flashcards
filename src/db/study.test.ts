@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { pickNext } from '../session/buildQueue'
 import { db } from './db'
 import { addBasicNote, updateNote } from './notes'
-import { allowMoreNewCards, getOverview, loadQueueInput, readyCount, recordReview, undoReview } from './study'
+import { allowMoreNewCards, getOverview, loadQueueInput, readyCount, recordReview, resetSetProgress, undoReview } from './study'
 import { countCardsIn, createSet, createSubject, createTopic, deleteSubject, deleteTopic, listSets, moveSet, setExamDates } from './subjects'
 
 const MIN = 60_000
@@ -223,3 +223,31 @@ describe('topics', () => {
     expect(queue.cards.map((c) => c.id)).toEqual([card.id])
   })
 })
+
+describe('reset progress', () => {
+  it('makes every card in a set new again and keeps the cards', async () => {
+    const subject = await createSubject('History')
+    const set = await createSet(subject.id, 'Tudors')
+    const other = await createSet(subject.id, 'Stuarts')
+    await addBasicNote(set.id, 'Q1', 'A1')
+    await addBasicNote(set.id, 'Q2', 'A2')
+    await addBasicNote(other.id, 'Q3', 'A3')
+    const cards = await db.cards.toArray()
+    for (const card of cards) for (let i = 0; i < 6; i++) await recordReview(card.id, i < 5 ? 1 : 4, 1000 + i * MIN)
+    const keep = cards.find((c) => c.set_id === other.id)!
+    const otherBefore = await db.cards.get(keep.id)
+
+    expect(await resetSetProgress(set.id, 10 * MIN)).toBe(2)
+
+    for (const card of await db.cards.where('set_id').equals(set.id).toArray()) {
+      expect(card).toMatchObject({ state: 0, reps: 0, lapses: 0, last_review: null, is_leech: false, deleted: false })
+      const logs = await db.review_logs.where('card_id').equals(card.id).toArray()
+      expect(logs.length).toBe(6)
+      expect(logs.every((l) => l.deleted)).toBe(true)
+    }
+    expect((await db.notes.toArray()).filter((n) => !n.deleted)).toHaveLength(3)
+    expect(await db.cards.get(keep.id)).toEqual(otherBefore)
+    expect((await getOverview(10 * MIN)).bySet.get(set.id)).toMatchObject({ total: 2, new: 2, learning: 0, known: 0 })
+  })
+})
+

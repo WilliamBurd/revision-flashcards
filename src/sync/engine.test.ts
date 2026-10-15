@@ -188,4 +188,27 @@ describe('sync', () => {
     await syncOnce(phone, remote)
     expect((await phone.settings.get('settings'))?.new_cards_per_day_total).toBe(15)
   })
+
+  it('keeps a reset card new on other devices, even after its old reviews sync', async () => {
+    const remote = new MemoryRemote()
+    const phone = device()
+    const laptop = device()
+    await addCard(laptop)
+    await review(laptop, 3, T0 + 1000, 'log-1')
+    await syncOnce(laptop, remote)
+    await syncOnce(phone, remote)
+    await review(phone, 3, T0 + 2000, 'log-2')
+    await syncOnce(phone, remote)
+
+    // What resetSetProgress does, on the laptop (which hasn't seen log-2 yet).
+    const at = T0 + 3000
+    await laptop.cards.update('card', { ...newCardSchedule(at), is_leech: false, created_at: at, updated_at: at })
+    await laptop.review_logs.toCollection().modify({ deleted: true, updated_at: at })
+    await syncOnce(laptop, remote)
+    // log-2 reaches the laptop only now. It's from before the reset, so it doesn't bring the progress back.
+    await syncOnce(phone, remote)
+    await syncOnce(laptop, remote)
+    await syncOnce(phone, remote)
+    for (const d of [phone, laptop]) expect(await d.cards.get('card')).toMatchObject({ reps: 0, state: 0, due: at })
+  })
 })

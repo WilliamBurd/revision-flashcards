@@ -11,8 +11,10 @@ export type Schedule = ReturnType<typeof newCardSchedule> & { is_leech: boolean 
 
 /** `examDates` are the exam dates for the card's set, so replays follow the same exam rules. */
 export function replaySchedule(card: Card, logs: ReviewLog[], settings: SchedulerSettings, examDates: string[] = []): Schedule {
+  // A reset card starts again from its created_at; reviews from before then
+  // (still arriving from a device that was offline) no longer count.
   const counted = logs
-    .filter((l) => l.card_id === card.id && !l.deleted && !l.is_cram)
+    .filter((l) => l.card_id === card.id && !l.deleted && !l.is_cram && l.reviewed_at >= card.created_at)
     .sort((a, b) => a.reviewed_at - b.reviewed_at || a.id.localeCompare(b.id))
   let schedule = newCardSchedule(card.created_at)
   let forgotten = 0
